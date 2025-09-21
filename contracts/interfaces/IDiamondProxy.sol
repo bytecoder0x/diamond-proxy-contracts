@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IDiamondLoupe} from "./IDiamondLoupe.sol";
+import {IDiamondCut} from "./IDiamondCut.sol";
+
 /// @title IDiamondProxy
 /// @notice Main interface for the Diamond Proxy SaaS solution
 /// @dev Combines all facet interfaces for external integration
-interface IDiamondProxy {
+interface IDiamondProxy is IDiamondLoupe, IDiamondCut {
     // ============ Execution Interface ============
     
     struct ExecuteCallParams {
@@ -19,6 +22,7 @@ interface IDiamondProxy {
         bytes permit2Data;
     }
 
+    function initializeExecutionRelay() external;
     function executeCall(ExecuteCallParams calldata params) external payable;
     function executeCallBatch(ExecuteCallParams[] calldata params) external payable;
     function simpleCall(address target, bytes calldata callData) external;
@@ -28,6 +32,7 @@ interface IDiamondProxy {
     function addWhitelistedTarget(address target) external;
     function removeWhitelistedTarget(address target) external;
     function addWhitelistedSelector(address target, bytes4 selector) external;
+    function addWhitelistedSelectorsBatch(address[] calldata targets, bytes4[] calldata selectors) external;
     function removeWhitelistedSelector(address target, bytes4 selector) external;
     function isWhitelistedTarget(address target) external view returns (bool);
     function isWhitelistedSelector(address target, bytes4 selector) external view returns (bool);
@@ -56,7 +61,12 @@ interface IDiamondProxy {
     function emergencyPause(bool _paused) external;
     function emergencyRescue(address token, address to, uint256 amount) external;
     function initialize(address admin, address permit2) external;
-
+    function setPermit2(address _permit2) external;
+    function getPermit2() external view returns (address);
+    function setTreasury(address _treasury) external;
+    function getTreasury() external view returns (address);
+    function emergencyWithdrawErc20(address[] memory tokens) external;
+    function emergencyWithdrawEth() external;
 
     // ============ Events ============
     
