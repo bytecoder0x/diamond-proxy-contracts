@@ -35,7 +35,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     /// keccak256(
     /// "Transfer(address owner,address token,uint256 amount,address recipient,address feeToken,uint256 feeAmount,uint256 nonce,uint256 deadline)"
     /// )
-    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x7122e7569511b1e7f33a6f41934b6f95410891aa92615dcb48c0359719bcff6a;
+    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x9df66cd19f5e8750d4b2febd71859a60841aadea6bc17657ceb6490473c3f3e8;
 
     /// @notice Reentrancy guard modifier
     // Use OZ upgradeable guard via initializer in AdminFacet or a dedicated init
@@ -337,7 +337,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
             LibPermit.makePermit2(token, owner, amount, permit2Data);
         }
         
-        LibPermit.transferPayment(token, owner, recipient, amount);
+        _transferPayment(token, owner, recipient, amount);
     }
 
     /// @notice Approve token to target contract
@@ -354,6 +354,18 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
                 tokenContract.forceApprove(target, 0);
             }
             tokenContract.forceApprove(target, amount);
+        }
+    }
+
+    /// @notice Transfer payment from owner to recipient
+    /// @dev while we do not support permit 2, transfer via diamond
+    /// @param token Token address
+    /// @param owner Owner of tokens
+    /// @param to Recipient address
+    /// @param amount Amount to transfer
+    function _transferPayment(address token, address owner, address to, uint256 amount) internal {
+        if (amount > 0) {
+            IERC20(token).transferFrom(owner, to, amount);
         }
     }
 
