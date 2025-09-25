@@ -62,4 +62,40 @@ interface IExecutionFacet {
         address indexed target,
         bytes callData
     );
+
+    function initializeExecutionRelay() external;
+
+    function relaySignedSwapCall(
+        address owner,
+        ExecuteSwapCallParams calldata params,
+        address feeToken,
+        uint256 feeAmount,
+        bytes calldata feeTokenPermitData,
+        bytes calldata feePermit2Data,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) external;
+
+    function relaySignedTransferCall(
+        address owner,
+        ExecuteTransferParams calldata params,
+        address feeToken,
+        uint256 feeAmount,
+        bytes calldata feeTokenPermitData,
+        bytes calldata feePermit2Data,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) external;
+
+    function relaySignedSwapCallBatch(
+        BatchArgs calldata b,
+        ExecuteSwapCallParams[] calldata params
+    ) external;
+
+    function relaySignedTransferCallBatch(
+        BatchArgs calldata b,
+        ExecuteTransferParams[] calldata params
+    ) external;
 }

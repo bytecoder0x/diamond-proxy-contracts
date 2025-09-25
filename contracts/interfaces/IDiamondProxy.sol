@@ -3,32 +3,13 @@ pragma solidity 0.8.30;
 
 import {IDiamondLoupe} from "./IDiamondLoupe.sol";
 import {IDiamondCut} from "./IDiamondCut.sol";
+import {IExecutionFacet} from "./facets/IExecutionFacet.sol";
 
 /// @title IDiamondProxy
 /// @notice Main interface for the Diamond Proxy SaaS solution
 /// @dev Combines all facet interfaces for external integration
-interface IDiamondProxy is IDiamondLoupe, IDiamondCut {
-    // ============ Execution Interface ============
-    
-    struct ExecuteCallParams {
-        address target;
-        bytes callData;
-        address tokenIn;
-        uint256 amountIn;
-        address tokenOut;
-        uint256 minAmountOut;
-        address recipient;
-        bytes tokenPermitData;
-        bytes permit2Data;
-    }
-
-    function initializeExecutionRelay() external;
-    function executeCall(ExecuteCallParams calldata params) external payable;
-    function executeCallBatch(ExecuteCallParams[] calldata params) external payable;
-    function simpleCall(address target, bytes calldata callData) external;
-
+interface IDiamondProxy is IDiamondLoupe, IDiamondCut, IExecutionFacet {
     // ============ Whitelist Interface ============
-    
     function addWhitelistedTarget(address target) external;
     function removeWhitelistedTarget(address target) external;
     function addWhitelistedSelector(address target, bytes4 selector) external;
