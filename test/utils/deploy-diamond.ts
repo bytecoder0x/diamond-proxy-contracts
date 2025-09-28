@@ -1,18 +1,11 @@
-import { network } from "hardhat";
-import { PERMIT2_ADDRESS, WHITELIST_MANAGER_ROLE } from "./constant.js";
-import { getTargetEvent } from "./helpers.js";
-import { Address, http, parseEther } from "viem";
-import { hardhat } from "viem/chains";
-import { NetworkConnection } from "hardhat/types/network";
-
-export const {
-	viem,
-	networkHelpers: { loadFixture },
-} = await network.connect();
-export const publicClient = await viem.getPublicClient();
+import { publicClient } from "./client.js";
+import { OPERATOR_ROLE, PERMIT2_ADDRESS, WHITELIST_MANAGER_ROLE } from "./constant.js";
+import { getTargetEvent, recieveUsdc } from "./helpers.js";
+import { Address, parseEther, parseUnits } from "viem";
+import { viem } from "./client.js";
 
 export const deployDiamond = async () => {
-    const [admin, user1, user2] = await viem.getWalletClients();
+    const [admin, operator, user1, user2, treasury] = await viem.getWalletClients();
 	
 	const diamondCutFacet = await viem.deployContract("DiamondCutFacet");
 	const diamondLoupeFacet = await viem.deployContract("DiamondLoupeFacet");
@@ -47,9 +40,14 @@ export const deployDiamond = async () => {
 
     const diamondContract = await viem.getContractAt("IDiamondProxy", diamondAddress);
     await diamondContract.write.initializeExecutionRelay();
+	await diamondContract.write.setTreasury([treasury.account.address]);
 	await diamondContract.write.grantRole([WHITELIST_MANAGER_ROLE, admin.account.address]);
+	await diamondContract.write.grantRole([OPERATOR_ROLE, operator.account.address]);
 
-    const mockToken = await viem.deployContract("Token", [parseEther("100000000")]); // 100M tokens
+    const mockToken = await viem.deployContract("MockToken", [parseEther("100000000")]); // 100M tokens
+	const mockFeeToken = await viem.deployContract("MockFeeToken", [parseEther("100000000")]); // 100M tokens
+
+	await recieveUsdc(parseUnits("1000", 6), admin.account.address);
 
 	return {
 		diamondAddress: diamondAddress,
@@ -63,8 +61,11 @@ export const deployDiamond = async () => {
         libSelectorsAddress: libSelectors.address,
         libSelectors: libSelectors,
 		diamond: diamondContract,
+		treasuryAddress: treasury.account.address,
         mockToken: mockToken,
+		mockFeeToken: mockFeeToken,
 		admin,
+		operator,
 		user1,
 		user2,
 	};
