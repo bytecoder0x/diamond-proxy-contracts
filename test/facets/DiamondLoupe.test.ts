@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { deployDiamond, loadFixture } from "../utils/utils.js";
+import { deployDiamond } from "../utils/deploy-diamond.js";
+import { loadFixture } from "../utils/client.js";
 
 describe("DiamondLoupeFacet", async function () {
 	it("Should match the facet function selectors with the facet address that belong to", async function () {

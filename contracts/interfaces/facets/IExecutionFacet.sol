@@ -98,4 +98,6 @@ interface IExecutionFacet {
         BatchArgs calldata b,
         ExecuteTransferParams[] calldata params
     ) external;
+
+    function nonces(address owner) external view returns (uint256);
 }

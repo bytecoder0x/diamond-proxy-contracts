@@ -147,6 +147,14 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         }
     }
 
+        public 
+        view 
+        override(NoncesUpgradeable, IExecutionFacet) 
+        returns (uint256) 
+    {
+        return super.nonces(owner);
+    }
+
     function _verifyAndConsumeSwap(
         address owner,
         ExecuteSwapCallParams calldata params,
@@ -280,16 +288,6 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         _validateCallSelector(params.token, TRANSFER_FROM_SELECTOR);
         _transferFromWithPermit(owner, params.recipient, params.token, params.amount, params.tokenPermitData, params.permit2Data);
         emit TransferCallExecuted(owner, params.token, params.amount, params.recipient);
-    }
-
-    /// @notice Simple call without token handling (for view functions or simple calls)
-    /// @param target Target contract address
-    /// @param callData Call data to execute
-    function simpleCall(address target, bytes calldata callData) external nonReentrant whenNotPaused {
-        _validateCall(target, callData);
-        _executeTargetCall(target, callData, 0);
-        
-        emit SimpleCallExecuted(msg.sender, target, callData);
     }
 
     /// @notice Validate that the target and selector are whitelisted
