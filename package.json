@@ -2,6 +2,10 @@
   "name": "diamond-proxy-contracts",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "deploy-polygon": "npx hardhat ignition deploy --network polygon ignition/modules/diamond-deploy.ts",
+    "setup-polygon": "npx hardhat ignition deploy --network polygon ignition/modules/diamond-setup.ts"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",

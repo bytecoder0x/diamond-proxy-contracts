@@ -32,7 +32,7 @@ const config: HardhatUserConfig = {
       type: "edr-simulated",
       chainType: "l1",
       forking: {
-        url: "https://ethereum-rpc.publicnode.com",
+        url: configVariable("ETH_RPC_URL"),
         blockNumber: 23461899,
       },
       chainId: 1,
@@ -40,6 +40,12 @@ const config: HardhatUserConfig = {
     hardhatOp: {
       type: "edr-simulated",
       chainType: "op",
+    },
+    polygon: {
+      type: "http",
+      chainType: "op",
+      url: configVariable("POLYGON_RPC_URL"),
+      accounts: [configVariable("POLYGON_PRIVATE_KEY")],
     },
   },
 };
