@@ -16,50 +16,26 @@ import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Nonce
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {BaseFacet} from "./BaseFacet.sol";
+import {IExecutionFacet} from "../interfaces/facets/IExecutionFacet.sol";
 
-contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuardUpgradeable, BaseFacet {
+contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuardUpgradeable, BaseFacet {
     using SafeERC20 for IERC20;
     using Address for address;
     using LibAppStorage for LibAppStorage.AppStorage;
 
-    /// @notice Parameters for executing a call with ERC20 tokens
-    struct ExecuteCallParams {
-        address target;                 // Target contract to call
-        bytes callData;                // Call data to execute
-        address tokenIn;               // Input token address (address(0) for ETH)
-        uint256 amountIn;              // Input token amount
-        address tokenOut;              // Output token address (address(0) for ETH)
-        uint256 minAmountOut;          // Minimum output amount (slippage protection)
-        address recipient;             // Recipient of output tokens
-        bytes tokenPermitData;         // EIP-2612/DAI permit data
-        bytes permit2Data;             // Permit2 signature data
-    }
+    bytes4 public constant TRANSFER_FROM_SELECTOR = 0xa85e59e4;
 
-    /// @dev EIP-712 typehash for signed relayed execution with fee
+    /// @dev EIP-712 typehash for Swap execution with fee
     /// keccak256(
-    /// "SignedCall(address owner,address target,bytes32 callDataHash,address tokenIn,uint256 amountIn,address tokenOut,uint256 minAmountOutInSrcChain,address recipient,address feeToken,uint256 feeAmount,uint256 nonce,uint256 deadline)"
+    /// "Swap(address owner,address target,bytes32 callDataHash,address tokenIn,address tokenOut,uint256 amountIn,uint256 amountOutMin,address recipient,address feeToken,uint256 feeAmount,uint256 nonce,uint256 deadline)"
     /// )
-    bytes32 public constant SIGNED_CALL_TYPEHASH = 0xae551774583d918d46ecdf5ac8115ad13aa380f944f6df00029f5d4b3b21550e;
+    bytes32 public constant SIGNED_SWAP_CALL_TYPEHASH = 0x7122e7569511b1e7f33a6f41934b6f95410891aa92615dcb48c0359719bcff6a;
 
-    event RelayExecuted(address indexed owner, address indexed relayer, address indexed target, bytes4 selector);
-    event FeeCollected(address indexed owner, address indexed token, uint256 amount, address indexed treasury);
-
-    event CallExecuted(
-        address indexed user,
-        address indexed target,
-        address indexed tokenIn,
-        uint256 amountIn,
-        address tokenOut,
-        uint256 amountOut,
-        address recipient
-    );
-    
-    event SimpleCallExecuted(
-        address indexed user,
-        address indexed target,
-        bytes callData
-    );
-
+    /// @dev EIP-712 typehash for Transfer execution with fee
+    /// keccak256(
+    /// "Transfer(address owner,address token,uint256 amount,address recipient,address feeToken,uint256 feeAmount,uint256 nonce,uint256 deadline)"
+    /// )
+    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x9df66cd19f5e8750d4b2febd71859a60841aadea6bc17657ceb6490473c3f3e8;
 
     /// @notice Reentrancy guard modifier
     // Use OZ upgradeable guard via initializer in AdminFacet or a dedicated init
@@ -99,10 +75,10 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
     /// @param params Array of execution parameters
     // Removed external executeCallBatchFor; use signed relay batch below
 
-    /// @notice Relay a single signed call with optional fee in a different token
-    function relaySignedCall(
+    /// @notice Relay a single signed swap call with optional fee in a different token
+    function relaySignedSwapCall(
         address owner,
-        ExecuteCallParams calldata params,
+        ExecuteSwapCallParams calldata params,
         address feeToken,
         uint256 feeAmount,
         bytes calldata feeTokenPermitData,
@@ -111,59 +87,123 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
         uint256 deadline,
         bytes calldata signature
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
-        _verifyAndConsume(owner, params, feeToken, feeAmount, nonce, deadline, signature);
+        _verifyAndConsumeSwap(owner, params, feeToken, feeAmount, nonce, deadline, signature);
         if (params.tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
         _collectFee(owner, feeToken, feeAmount, feeTokenPermitData, feePermit2Data);
-        _executeForOwner(owner, params);
+        _executeSwapForOwner(owner, params);
         bytes4 selector = bytes4(params.callData[:4]);
         emit RelayExecuted(owner, msg.sender, params.target, selector);
     }
 
-    /// @notice Relay multiple signed calls
-    struct BatchArgs {
-        address[] owners;
-        ExecuteCallParams[] params;
-        address[] feeTokens;
-        uint256[] feeAmounts;
-        bytes[] feeTokenPermitDatas;
-        bytes[] feePermit2Datas;
-        uint256[] nonces;
-        uint256[] deadlines;
-        bytes[] signatures;
+    /// @notice Relay a single signed transfer call with optional fee in a different token
+    function relaySignedTransferCall(
+        address owner,
+        ExecuteTransferParams calldata params,
+        address feeToken,
+        uint256 feeAmount,
+        bytes calldata feeTokenPermitData,
+        bytes calldata feePermit2Data,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
+        _verifyAndConsumeTransfer(owner, params, feeToken, feeAmount, nonce, deadline, signature);
+        if (params.token == address(0)) revert LibAppStorage.ZeroAddress();
+        _collectFee(owner, feeToken, feeAmount, feeTokenPermitData, feePermit2Data);
+        _executeTransferForOwner(owner, params);
+        emit RelayExecuted(owner, msg.sender, params.token, TRANSFER_FROM_SELECTOR);
     }
 
-    function relaySignedCallBatch(BatchArgs calldata b)
+    function relaySignedSwapCallBatch(BatchArgs calldata b, ExecuteSwapCallParams[] calldata params)
         external
         whenNotPaused
         onlyRole(LibAppStorage.OPERATOR_ROLE)
     {
-        uint256 length = b.owners.length;
-        if (
-            length != b.params.length ||
-            length != b.feeTokens.length ||
-            length != b.feeAmounts.length ||
-            length != b.feeTokenPermitDatas.length ||
-            length != b.feePermit2Datas.length ||
-            length != b.nonces.length ||
-            length != b.deadlines.length ||
-            length != b.signatures.length
-        ) revert LibAppStorage.InvalidSelector();
+        uint256 length = _validateBatchArgs(params.length, b);
 
         for (uint256 i = 0; i < length; ++i) {
-            _verifyAndConsume(b.owners[i], b.params[i], b.feeTokens[i], b.feeAmounts[i], b.nonces[i], b.deadlines[i], b.signatures[i]);
-            if (b.params[i].tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
+            _verifyAndConsumeSwap(b.owners[i], params[i], b.feeTokens[i], b.feeAmounts[i], b.nonces[i], b.deadlines[i], b.signatures[i]);
+            if (params[i].tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
             _collectFee(b.owners[i], b.feeTokens[i], b.feeAmounts[i], b.feeTokenPermitDatas[i], b.feePermit2Datas[i]);
-            _executeForOwner(b.owners[i], b.params[i]);
-            bytes4 selector = bytes4(b.params[i].callData[:4]);
-            emit RelayExecuted(b.owners[i], msg.sender, b.params[i].target, selector);
+            _executeSwapForOwner(b.owners[i], params[i]);
+            bytes4 selector = bytes4(params[i].callData[:4]);
+            emit RelayExecuted(b.owners[i], msg.sender, params[i].target, selector);
         }
+    }
+
+    function relaySignedTransferCallBatch(BatchArgs calldata b, ExecuteTransferParams[] calldata params)
+        external
+        whenNotPaused
+        onlyRole(LibAppStorage.OPERATOR_ROLE)
+    {
+        uint256 length = _validateBatchArgs(params.length, b);
+
+        for (uint256 i = 0; i < length; ++i) {
+            _verifyAndConsumeTransfer(b.owners[i], params[i], b.feeTokens[i], b.feeAmounts[i], b.nonces[i], b.deadlines[i], b.signatures[i]);
+            if (params[i].token == address(0)) revert LibAppStorage.ZeroAddress();
+            _collectFee(b.owners[i], b.feeTokens[i], b.feeAmounts[i], b.feeTokenPermitDatas[i], b.feePermit2Datas[i]);
+            _executeTransferForOwner(b.owners[i], params[i]);
+            emit RelayExecuted(b.owners[i], msg.sender, params[i].token, TRANSFER_FROM_SELECTOR);
+        }
+    }
+
+    function _verifyAndConsumeSwap(
+        address owner,
+        ExecuteSwapCallParams calldata params,
+        address feeToken,
+        uint256 feeAmount,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) internal {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                SIGNED_SWAP_CALL_TYPEHASH,
+                owner,
+                params.target,
+                keccak256(params.callData),
+                params.tokenIn,
+                params.tokenOut,
+                params.amountIn,
+                params.amountOutMin,
+                params.recipient,
+                feeToken,
+                feeAmount,
+                nonce,
+                deadline
+            )
+        );
+        _verifyAndConsume(owner, structHash, nonce, deadline, signature);
+    }
+
+    function _verifyAndConsumeTransfer(
+        address owner,
+        ExecuteTransferParams calldata params,
+        address feeToken,
+        uint256 feeAmount,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) internal {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                SIGNED_TRANSFER_CALL_TYPEHASH,
+                owner,
+                params.token,
+                params.amount,
+                params.recipient,
+                feeToken,
+                feeAmount,
+                nonce,
+                deadline
+            )
+        );
+        _verifyAndConsume(owner, structHash, nonce, deadline, signature);
     }
 
     function _verifyAndConsume(
         address owner,
-        ExecuteCallParams calldata params,
-        address feeToken,
-        uint256 feeAmount,
+        bytes32 structHash,
         uint256 nonce,
         uint256 deadline,
         bytes calldata signature
@@ -172,27 +212,27 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
         if (block.timestamp > deadline) revert LibAppStorage.CallFailed();
         uint256 current = nonces(owner);
         if (nonce != current) revert LibAppStorage.CallFailed();
-        bytes32 structHash = keccak256(
-            abi.encode(
-                SIGNED_CALL_TYPEHASH,
-                owner,
-                params.target,
-                keccak256(params.callData),
-                params.tokenIn,
-                params.amountIn,
-                params.tokenOut,
-                params.minAmountOut,
-                params.recipient,
-                feeToken,
-                feeAmount,
-                nonce,
-                deadline
-            )
-        );
+
         bytes32 digest = _hashTypedDataV4(structHash);
         address recovered = ECDSA.recover(digest, signature);
         if (recovered != owner) revert LibAppStorage.NotAuthorized();
+
         _useCheckedNonce(owner, nonce);
+    }
+
+    function _validateBatchArgs(uint256 paramsLength, BatchArgs calldata b) internal pure returns (uint256) {
+        uint256 length = b.owners.length;
+        if (
+            length != paramsLength ||
+            length != b.feeTokens.length ||
+            length != b.feeAmounts.length ||
+            length != b.feeTokenPermitDatas.length ||
+            length != b.feePermit2Datas.length ||
+            length != b.nonces.length ||
+            length != b.deadlines.length ||
+            length != b.signatures.length
+        ) revert LibAppStorage.InvalidSelector();
+        return length;
     }
 
     function _collectFee(
@@ -207,31 +247,25 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         address treasury = s.treasury;
         if (treasury == address(0)) revert LibAppStorage.ZeroAddress();
-        if (feeTokenPermitData.length > 0) {
-            LibPermit.makeTokenPermit(feeToken, owner, feeTokenPermitData);
-        }
-        if (feePermit2Data.length > 0) {
-            LibPermit.makePermit2(feeToken, owner, feeAmount, feePermit2Data);
-        }
-        LibPermit.transferPayment(feeToken, owner, treasury, feeAmount);
+        _transferFromWithPermit(owner, treasury, feeToken, feeAmount, feeTokenPermitData, feePermit2Data);
         emit FeeCollected(owner, feeToken, feeAmount, treasury);
     }
 
-    function _executeForOwner(address owner, ExecuteCallParams calldata params) internal {
+    function _executeSwapForOwner(address owner, ExecuteSwapCallParams calldata params) internal {
         _validateCall(params.target, params.callData);
         uint256 balanceBefore = _getBalance(params.tokenOut, params.recipient);
         if (params.tokenIn != address(0) && params.amountIn > 0) {
-            _handleTokenInputFrom(owner, params.tokenIn, params.amountIn, params.tokenPermitData, params.permit2Data);
+            _transferFromWithPermit(owner, address(this), params.tokenIn, params.amountIn, params.tokenPermitData, params.permit2Data);
             _approveToken(params.tokenIn, params.target, params.amountIn);
         }
         uint256 ethValue = params.tokenIn == address(0) ? params.amountIn : 0;
         _executeTargetCall(params.target, params.callData, ethValue);
         uint256 balanceAfter = _getBalance(params.tokenOut, params.recipient);
         uint256 amountOut = balanceAfter - balanceBefore;
-        if (amountOut < params.minAmountOut) {
+        if (amountOut < params.amountOutMin) {
             revert LibAppStorage.SlippageExceeded();
         }
-        emit CallExecuted(
+        emit SwapCallExecuted(
             owner,
             params.target,
             params.tokenIn,
@@ -240,6 +274,12 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
             amountOut,
             params.recipient
         );
+    }
+
+    function _executeTransferForOwner(address owner, ExecuteTransferParams calldata params) internal {
+        _validateCallSelector(params.token, TRANSFER_FROM_SELECTOR);
+        _transferFromWithPermit(owner, params.recipient, params.token, params.amount, params.tokenPermitData, params.permit2Data);
+        emit TransferCallExecuted(owner, params.token, params.amount, params.recipient);
     }
 
     /// @notice Simple call without token handling (for view functions or simple calls)
@@ -256,12 +296,15 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
     /// @param target Target contract address
     /// @param callData Call data containing the selector
     function _validateCall(address target, bytes calldata callData) internal view {
-        LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
-        
         if (callData.length < 4) revert LibAppStorage.InvalidSelector();
         bytes4 selector = bytes4(callData[:4]);
         
-        // Check if target is whitelisted via role OR specific selector is whitelisted
+        _validateCallSelector(target, selector);
+    }
+
+    // Check if target is whitelisted via role OR specific selector is whitelisted
+    function _validateCallSelector(address target, bytes4 selector) internal view {
+        LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         (bool success, bytes memory result) = address(this).staticcall(
             abi.encodeWithSignature("hasRole(bytes32,address)", LibAppStorage.WHITELISTED_TARGET_ROLE, target)
         );
@@ -271,13 +314,16 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
         }
     }
 
-    /// @notice Handle input token transfers with permit support
+    /// @notice Handle transfer from with permit support
+    /// @param owner Token owner
+    /// @param recipient Recipient of tokens
     /// @param token Token address
     /// @param amount Amount to transfer
     /// @param tokenPermitData EIP-2612/DAI permit data
     /// @param permit2Data Permit2 signature data
-    function _handleTokenInputFrom(
+    function _transferFromWithPermit(
         address owner,
+        address recipient,
         address token,
         uint256 amount,
         bytes calldata tokenPermitData,
@@ -291,7 +337,7 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
             LibPermit.makePermit2(token, owner, amount, permit2Data);
         }
         
-        LibPermit.transferPayment(token, owner, address(this), amount);
+        _transferPayment(token, owner, recipient, amount);
     }
 
     /// @notice Approve token to target contract
@@ -308,6 +354,18 @@ contract ExecutionFacet is EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuard
                 tokenContract.forceApprove(target, 0);
             }
             tokenContract.forceApprove(target, amount);
+        }
+    }
+
+    /// @notice Transfer payment from owner to recipient
+    /// @dev while we do not support permit 2, transfer via diamond
+    /// @param token Token address
+    /// @param owner Owner of tokens
+    /// @param to Recipient address
+    /// @param amount Amount to transfer
+    function _transferPayment(address token, address owner, address to, uint256 amount) internal {
+        if (amount > 0) {
+            IERC20(token).transferFrom(owner, to, amount);
         }
     }
 

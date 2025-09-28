@@ -34,9 +34,15 @@ library LibSelectors {
 
     // ---------------- Execution Facet ----------------
     function getExecutionFacetSelectors() external pure returns (bytes4[] memory selectors) {
-        selectors = new bytes4[](2);
+        selectors = new bytes4[](7);
         selectors[0] = ExecutionFacet.simpleCall.selector;
-        selectors[1] = ExecutionFacet.initializeExecutionRelay.selector;
+        selectors[1] = ExecutionFacet.relaySignedSwapCall.selector;
+        selectors[2] = ExecutionFacet.relaySignedSwapCallBatch.selector;
+        selectors[3] = ExecutionFacet.relaySignedTransferCall.selector;
+        selectors[4] = ExecutionFacet.relaySignedTransferCallBatch.selector;
+        selectors[5] = ExecutionFacet.initializeExecutionRelay.selector;
+        // nonces function
+        selectors[6] = bytes4(keccak256("nonces(address)"));
     }
 
     // ---------------- Admin Facet ----------------
