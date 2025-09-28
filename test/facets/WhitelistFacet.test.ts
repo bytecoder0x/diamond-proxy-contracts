@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { deployDiamond, loadFixture } from "../utils/utils.js";
+import { deployDiamond } from "../utils/deploy-diamond.js";
+import { loadFixture } from "../utils/client.js";
 import { getRandomAddress } from "../utils/helpers.js";
 
 describe("WhitelistFacet", async function () {

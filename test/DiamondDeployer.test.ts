@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { deployDiamond, loadFixture } from "./utils/utils.js";
+import { deployDiamond } from "./utils/deploy-diamond.js";
+import { loadFixture } from "./utils/client.js";
 
 describe("DiamondDeployer", async function () {
 	it("Should deploy with correct facets and function selectors", async function () {

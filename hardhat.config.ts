@@ -31,6 +31,11 @@ const config: HardhatUserConfig = {
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",
+      forking: {
+        url: "https://ethereum-rpc.publicnode.com",
+        blockNumber: 23461899,
+      },
+      chainId: 1,
     },
     hardhatOp: {
       type: "edr-simulated",

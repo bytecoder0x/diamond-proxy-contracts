@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { deployDiamond, viem, loadFixture } from "../utils/utils.js";
+import { deployDiamond } from "../utils/deploy-diamond.js";
+import { loadFixture, viem } from "../utils/client.js";
 import { toFunctionSelector } from "viem";
 import { ZERO_ADDRESS, ZERO_BYTES } from "../utils/constant.js";
 

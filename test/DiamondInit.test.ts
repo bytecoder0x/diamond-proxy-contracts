@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ADMIN_ROLE, PERMIT2_ADDRESS } from "./utils/constant.js";
-import { deployDiamond, loadFixture } from "./utils/utils.js";
+import { deployDiamond } from "./utils/deploy-diamond.js";
+import { loadFixture } from "./utils/client.js";
 
 describe("DiamondInit", async function () {
 	it("Should init the diamond with the correct admin and permit2", async function () {

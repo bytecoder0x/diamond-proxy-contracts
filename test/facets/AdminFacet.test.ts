@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { PERMIT2_ADDRESS, ZERO_ADDRESS } from "../utils/constant.js";
-import { deployDiamond, loadFixture, publicClient } from "../utils/utils.js";
+import { deployDiamond } from "../utils/deploy-diamond.js";
+import { loadFixture, publicClient } from "../utils/client.js";
 import { getRandomAddress } from "../utils/helpers.js";
 import { parseEther } from "viem";
 
 describe("AdminFacet", async function () {
-
     it("Should correctly pause and unpause the diamond", async function () {
 		const { diamond } = await loadFixture(deployDiamond);
 
@@ -33,10 +33,10 @@ describe("AdminFacet", async function () {
 	});
 
 	it("Should correctly set the treasury address", async function () {
-		const { diamond } = await loadFixture(deployDiamond);
+		const { diamond, treasuryAddress } = await loadFixture(deployDiamond);
 
 		const oldTreasury = await diamond.read.getTreasury();
-		assert.equal(oldTreasury, ZERO_ADDRESS);
+		assert.equal(oldTreasury.toLowerCase(), treasuryAddress.toLowerCase());
 
 		const newTreasury = getRandomAddress();
 		await diamond.write.setTreasury([newTreasury]);
