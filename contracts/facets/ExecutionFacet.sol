@@ -147,6 +147,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         }
     }
 
+    function nonces(address owner) 
         public 
         view 
         override(NoncesUpgradeable, IExecutionFacet) 
