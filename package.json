@@ -4,17 +4,21 @@
   "type": "module",
   "scripts": {
     "deploy-polygon": "npx hardhat ignition deploy --network polygon ignition/modules/diamond-deploy.ts",
-    "setup-polygon": "npx hardhat ignition deploy --network polygon ignition/modules/diamond-setup.ts"
+    "setup-polygon": "npx hardhat ignition deploy --network polygon ignition/modules/diamond-setup.ts",
+    "typechain-diamond": "npx typechain --target ethers-v6 --out-dir typechain \"artifacts/contracts/Diamond.sol/Diamond.json\""
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
+    "@nomicfoundation/hardhat-typechain": "^3.0.0",
+    "@openzeppelin/contracts": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1",
+    "@typechain/ethers-v6": "^0.5.1",
     "@types/node": "^22.18.3",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
     "hardhat": "^3.0.6",
+    "typechain": "^8.3.2",
     "typescript": "~5.8.0",
-    "viem": "^2.37.6",
-    "@openzeppelin/contracts": "^5.0.1",
-    "@openzeppelin/contracts-upgradeable": "^5.0.1"
+    "viem": "^2.37.6"
   }
 }

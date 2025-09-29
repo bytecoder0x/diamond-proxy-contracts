@@ -2,10 +2,11 @@ import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import hardhatNetworkHelpersPlugin from "@nomicfoundation/hardhat-network-helpers";
+import hardhatTypechainPlugin from "@nomicfoundation/hardhat-typechain";
 import { configVariable } from "hardhat/config";
 
 const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxViemPlugin, hardhatNetworkHelpersPlugin],
+  plugins: [hardhatToolboxViemPlugin, hardhatNetworkHelpersPlugin, hardhatTypechainPlugin],
   solidity: {
     profiles: {
       default: {
@@ -47,6 +48,9 @@ const config: HardhatUserConfig = {
       url: configVariable("POLYGON_RPC_URL"),
       accounts: [configVariable("POLYGON_PRIVATE_KEY")],
     },
+  },
+  typechain: {
+    outDir: "typechain"
   },
 };
 

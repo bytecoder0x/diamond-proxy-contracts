@@ -15,8 +15,12 @@
 
 # Typechain output
 /types
+/typechain
 
 # Hardhat coverage reports
 /coverage
+
+# VSCode
+.vscode
 
 .cursor
