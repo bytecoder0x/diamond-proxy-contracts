@@ -15,6 +15,7 @@ export interface GasLessSignatureForSwapParams {
 	feeToken: Address;
 	feeAmount: bigint;
 	data: `0x${string}`; // call data
+    nonce?: bigint; // optional nonce override for batching
 }
 
 export interface GasLessSignatureParamsForTransfer {
@@ -25,6 +26,7 @@ export interface GasLessSignatureParamsForTransfer {
 	recipient: Address;
 	feeToken: Address;
 	feeAmount: bigint;
+    nonce?: bigint; // optional nonce override for batching
 }
 
 export const getSignatureERC20Permit = async (
@@ -111,7 +113,7 @@ export const getGasLessSignatureForSwap = async (params: GasLessSignatureForSwap
 
 	const senderAddress = sender.account?.address;
 
-	const nonce = await diamond.read.nonces([senderAddress]);
+    const nonce = params.nonce ?? await diamond.read.nonces([senderAddress]);
 	const currentTime = await getCurrentBlockTimestamp();
 	const deadline = BigInt(currentTime + EXECUTION_DEADLINE);
 
@@ -127,32 +129,32 @@ export const getGasLessSignatureForSwap = async (params: GasLessSignatureForSwap
 			Swap: [
 				{ name: "owner", type: "address" },
 				{ name: "target", type: "address" },
-				{ name: "callDataHash", type: "bytes32" },
 				{ name: "tokenIn", type: "address" },
 				{ name: "tokenOut", type: "address" },
 				{ name: "amountIn", type: "uint256" },
 				{ name: "amountOutMin", type: "uint256" },
 				{ name: "recipient", type: "address" },
-				{ name: "feeToken", type: "address" },
-				{ name: "feeAmount", type: "uint256" },
+				{ name: "gasFeeToken", type: "address" },
+				{ name: "gasFeeAmount", type: "uint256" },
 				{ name: "nonce", type: "uint256" },
 				{ name: "deadline", type: "uint256" },
+				{ name: "callData", type: "bytes32" },
 			],
 		},
 		primaryType: "Swap",
 		message: {
 			owner: senderAddress,
 			target,
-			callDataHash: keccak256(data),
 			tokenIn,
 			tokenOut,
 			amountIn,
 			amountOutMin,
 			recipient,
-			feeToken,
-			feeAmount,
+			gasFeeToken: feeToken,
+			gasFeeAmount: feeAmount,
 			nonce,
 			deadline,
+			callData: keccak256(data),
 		},
 	});
 
@@ -183,7 +185,7 @@ export const getGasLessSignatureForTransfer = async (params: GasLessSignaturePar
 
 	const senderAddress = sender.account?.address;
 
-	const nonce = await diamond.read.nonces([senderAddress]);
+    const nonce = params.nonce ?? await diamond.read.nonces([senderAddress]);
 	const currentTime = await getCurrentBlockTimestamp();
 	const deadline = BigInt(currentTime + EXECUTION_DEADLINE);
 
@@ -201,8 +203,8 @@ export const getGasLessSignatureForTransfer = async (params: GasLessSignaturePar
 				{ name: "token", type: "address" },
 				{ name: "amount", type: "uint256" },
 				{ name: "recipient", type: "address" },
-				{ name: "feeToken", type: "address" },
-				{ name: "feeAmount", type: "uint256" },
+				{ name: "gasFeeToken", type: "address" },
+				{ name: "gasFeeAmount", type: "uint256" },
 				{ name: "nonce", type: "uint256" },
 				{ name: "deadline", type: "uint256" },
 			],
@@ -213,8 +215,8 @@ export const getGasLessSignatureForTransfer = async (params: GasLessSignaturePar
 			token,
 			amount,
 			recipient,
-			feeToken,
-			feeAmount,
+			gasFeeToken: feeToken,
+			gasFeeAmount: feeAmount,
 			nonce,
 			deadline,
 		},

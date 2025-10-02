@@ -27,15 +27,15 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
 
     /// @dev EIP-712 typehash for Swap execution with fee
     /// keccak256(
-    /// "Swap(address owner,address target,bytes32 callDataHash,address tokenIn,address tokenOut,uint256 amountIn,uint256 amountOutMin,address recipient,address feeToken,uint256 feeAmount,uint256 nonce,uint256 deadline)"
+    /// "Swap(address owner,address target,address tokenIn,address tokenOut,uint256 amountIn,uint256 amountOutMin,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline,bytes32 callData)"
     /// )
-    bytes32 public constant SIGNED_SWAP_CALL_TYPEHASH = 0x7122e7569511b1e7f33a6f41934b6f95410891aa92615dcb48c0359719bcff6a;
+    bytes32 public constant SIGNED_SWAP_CALL_TYPEHASH = 0x5920ea0bb4824da9c3fbd9a09667b5d360c30ccf190a57e91874c99b00c90784;
 
     /// @dev EIP-712 typehash for Transfer execution with fee
     /// keccak256(
-    /// "Transfer(address owner,address token,uint256 amount,address recipient,address feeToken,uint256 feeAmount,uint256 nonce,uint256 deadline)"
+    /// "Transfer(address owner,address token,uint256 amount,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline)"
     /// )
-    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x9df66cd19f5e8750d4b2febd71859a60841aadea6bc17657ceb6490473c3f3e8;
+    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x522026e92108289de322fe17f741d35e85cd9e1eeee7688e165675eb683cd7bd;
 
     /// @notice Reentrancy guard modifier
     // Use OZ upgradeable guard via initializer in AdminFacet or a dedicated init
@@ -61,35 +61,17 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         __Nonces_init();
     }
 
-    // direct external execution removed; use relaySignedCall instead
-
-    /// @notice Execute a call to a whitelisted target with token handling on behalf of owner (meta-signed)
-    /// @param owner Tokens payer/permit owner
-    /// @param params Execution parameters
-    // Removed external executeCallFor to avoid unauthorized calls; use signed relay below
-
-    // batch external execution removed; use relaySignedCallBatch instead
-
-    /// @notice Execute multiple calls on behalf of owner (meta-signed)
-    /// @param owner Tokens payer/permit owner
-    /// @param params Array of execution parameters
-    // Removed external executeCallBatchFor; use signed relay batch below
 
     /// @notice Relay a single signed swap call with optional fee in a different token
     function relaySignedSwapCall(
         address owner,
         ExecuteSwapCallParams calldata params,
-        address feeToken,
-        uint256 feeAmount,
-        bytes calldata feeTokenPermitData,
-        bytes calldata feePermit2Data,
-        uint256 nonce,
-        uint256 deadline,
-        bytes calldata signature
+        RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
-        _verifyAndConsumeSwap(owner, params, feeToken, feeAmount, nonce, deadline, signature);
+        _validateCall(params.target, params.tokenIn, params.callData);
+        _verifyAndConsumeSwap(owner, params, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.nonce, relayMeta.deadline, relayMeta.signature);
         if (params.tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
-        _collectFee(owner, feeToken, feeAmount, feeTokenPermitData, feePermit2Data);
+        _collectFee(owner, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.feeTokenPermitData, relayMeta.feePermit2Data);
         _executeSwapForOwner(owner, params);
         bytes4 selector = bytes4(params.callData[:4]);
         emit RelayExecuted(owner, msg.sender, params.target, selector);
@@ -99,53 +81,15 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     function relaySignedTransferCall(
         address owner,
         ExecuteTransferParams calldata params,
-        address feeToken,
-        uint256 feeAmount,
-        bytes calldata feeTokenPermitData,
-        bytes calldata feePermit2Data,
-        uint256 nonce,
-        uint256 deadline,
-        bytes calldata signature
+        RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
-        _verifyAndConsumeTransfer(owner, params, feeToken, feeAmount, nonce, deadline, signature);
+        _verifyAndConsumeTransfer(owner, params, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.nonce, relayMeta.deadline, relayMeta.signature);
         if (params.token == address(0)) revert LibAppStorage.ZeroAddress();
-        _collectFee(owner, feeToken, feeAmount, feeTokenPermitData, feePermit2Data);
+        _collectFee(owner, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.feeTokenPermitData, relayMeta.feePermit2Data);
         _executeTransferForOwner(owner, params);
         emit RelayExecuted(owner, msg.sender, params.token, TRANSFER_FROM_SELECTOR);
     }
 
-    function relaySignedSwapCallBatch(BatchArgs calldata b, ExecuteSwapCallParams[] calldata params)
-        external
-        whenNotPaused
-        onlyRole(LibAppStorage.OPERATOR_ROLE)
-    {
-        uint256 length = _validateBatchArgs(params.length, b);
-
-        for (uint256 i = 0; i < length; ++i) {
-            _verifyAndConsumeSwap(b.owners[i], params[i], b.feeTokens[i], b.feeAmounts[i], b.nonces[i], b.deadlines[i], b.signatures[i]);
-            if (params[i].tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
-            _collectFee(b.owners[i], b.feeTokens[i], b.feeAmounts[i], b.feeTokenPermitDatas[i], b.feePermit2Datas[i]);
-            _executeSwapForOwner(b.owners[i], params[i]);
-            bytes4 selector = bytes4(params[i].callData[:4]);
-            emit RelayExecuted(b.owners[i], msg.sender, params[i].target, selector);
-        }
-    }
-
-    function relaySignedTransferCallBatch(BatchArgs calldata b, ExecuteTransferParams[] calldata params)
-        external
-        whenNotPaused
-        onlyRole(LibAppStorage.OPERATOR_ROLE)
-    {
-        uint256 length = _validateBatchArgs(params.length, b);
-
-        for (uint256 i = 0; i < length; ++i) {
-            _verifyAndConsumeTransfer(b.owners[i], params[i], b.feeTokens[i], b.feeAmounts[i], b.nonces[i], b.deadlines[i], b.signatures[i]);
-            if (params[i].token == address(0)) revert LibAppStorage.ZeroAddress();
-            _collectFee(b.owners[i], b.feeTokens[i], b.feeAmounts[i], b.feeTokenPermitDatas[i], b.feePermit2Datas[i]);
-            _executeTransferForOwner(b.owners[i], params[i]);
-            emit RelayExecuted(b.owners[i], msg.sender, params[i].token, TRANSFER_FROM_SELECTOR);
-        }
-    }
 
     function nonces(address owner) 
         public 
@@ -170,7 +114,6 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
                 SIGNED_SWAP_CALL_TYPEHASH,
                 owner,
                 params.target,
-                keccak256(params.callData),
                 params.tokenIn,
                 params.tokenOut,
                 params.amountIn,
@@ -179,7 +122,8 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
                 feeToken,
                 feeAmount,
                 nonce,
-                deadline
+                deadline,
+                keccak256(params.callData)
             )
         );
         _verifyAndConsume(owner, structHash, nonce, deadline, signature);
@@ -229,20 +173,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         _useCheckedNonce(owner, nonce);
     }
 
-    function _validateBatchArgs(uint256 paramsLength, BatchArgs calldata b) internal pure returns (uint256) {
-        uint256 length = b.owners.length;
-        if (
-            length != paramsLength ||
-            length != b.feeTokens.length ||
-            length != b.feeAmounts.length ||
-            length != b.feeTokenPermitDatas.length ||
-            length != b.feePermit2Datas.length ||
-            length != b.nonces.length ||
-            length != b.deadlines.length ||
-            length != b.signatures.length
-        ) revert LibAppStorage.InvalidSelector();
-        return length;
-    }
+    // _validateBatchArgs removed; multicall handles array length externally
 
     function _collectFee(
         address owner,
@@ -261,14 +192,20 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     }
 
     function _executeSwapForOwner(address owner, ExecuteSwapCallParams calldata params) internal {
-        _validateCall(params.target, params.callData);
         uint256 balanceBefore = _getBalance(params.tokenOut, params.recipient);
-        if (params.tokenIn != address(0) && params.amountIn > 0) {
+        if (params.amountIn > 0) {
             _transferFromWithPermit(owner, address(this), params.tokenIn, params.amountIn, params.tokenPermitData, params.permit2Data);
             _approveToken(params.tokenIn, params.target, params.amountIn);
         }
-        uint256 ethValue = params.tokenIn == address(0) ? params.amountIn : 0;
-        _executeTargetCall(params.target, params.callData, ethValue);
+        (bool callSuccess, bytes memory retData) = params.target.call(params.callData);
+        if (!callSuccess) {
+            // refund input to owner and emit failure while keeping collected fee
+            if (params.amountIn > 0) {
+                IERC20(params.tokenIn).safeTransfer(owner, params.amountIn);
+            }
+            emit SwapCallFailed(owner, params.target, params.tokenIn, params.amountIn, params.tokenOut, params.recipient, retData);
+            return;
+        }
         uint256 balanceAfter = _getBalance(params.tokenOut, params.recipient);
         uint256 amountOut = balanceAfter - balanceBefore;
         if (amountOut < params.amountOutMin) {
@@ -286,7 +223,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     }
 
     function _executeTransferForOwner(address owner, ExecuteTransferParams calldata params) internal {
-        _validateCallSelector(params.token, TRANSFER_FROM_SELECTOR);
+        // TRANSFER_FROM_SELECTOR is always whitelisted
         _transferFromWithPermit(owner, params.recipient, params.token, params.amount, params.tokenPermitData, params.permit2Data);
         emit TransferCallExecuted(owner, params.token, params.amount, params.recipient);
     }
@@ -294,7 +231,11 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     /// @notice Validate that the target and selector are whitelisted
     /// @param target Target contract address
     /// @param callData Call data containing the selector
-    function _validateCall(address target, bytes calldata callData) internal view {
+    function _validateCall(address target, address tokenIn, bytes calldata callData) internal view {
+        if (target == address(0)) revert LibAppStorage.ZeroAddress();
+        if (tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
+        if (msg.value > 0) revert LibAppStorage.ETHValueNotAllowed();
+
         if (callData.length < 4) revert LibAppStorage.InvalidSelector();
         bytes4 selector = bytes4(callData[:4]);
         
@@ -304,12 +245,9 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     // Check if target is whitelisted via role OR specific selector is whitelisted
     function _validateCallSelector(address target, bytes4 selector) internal view {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
-        (bool success, bytes memory result) = address(this).staticcall(
-            abi.encodeWithSignature("hasRole(bytes32,address)", LibAppStorage.WHITELISTED_TARGET_ROLE, target)
-        );
-        bool targetWhitelisted = success && result.length > 0 && abi.decode(result, (bool));
-        if (!targetWhitelisted && !s.whitelistedSelectors[target][selector]) {
-            revert LibAppStorage.TargetNotWhitelisted();
+
+        if (!s.whitelistedSelectors[target][selector]) {
+            revert LibAppStorage.SelectorNotWhitelisted();
         }
     }
 
@@ -331,11 +269,9 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         if (tokenPermitData.length > 0) {
             LibPermit.makeTokenPermit(token, owner, tokenPermitData);
         }
-        
         if (permit2Data.length > 0) {
             LibPermit.makePermit2(token, owner, amount, permit2Data);
         }
-        
         _transferPayment(token, owner, recipient, amount);
     }
 
@@ -365,26 +301,6 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     function _transferPayment(address token, address owner, address to, uint256 amount) internal {
         if (amount > 0) {
             IERC20(token).transferFrom(owner, to, amount);
-        }
-    }
-
-    /// @notice Execute call to target contract
-    /// @param target Target contract address
-    /// @param callData Call data to execute
-    /// @param value ETH value to send
-    function _executeTargetCall(address target, bytes calldata callData, uint256 value) internal {
-        (bool success, bytes memory returnData) = target.call{value: value}(callData);
-        
-        if (!success) {
-            if (returnData.length > 0) {
-                // Bubble up the error
-                assembly {
-                    let returndata_size := mload(returnData)
-                    revert(add(32, returnData), returndata_size)
-                }
-            } else {
-                revert LibAppStorage.CallFailed();
-            }
         }
     }
 

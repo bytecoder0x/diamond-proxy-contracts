@@ -34,4 +34,29 @@ describe("WhitelistFacet", async function () {
         assert.equal(await diamond.read.isWhitelistedSelector([randomAddress, randomSelector1]), false);
         assert.equal(await diamond.read.isWhitelistedSelector([randomAddress2, randomSelector2]), false);
 	});
+
+	it("Should remove batch of selectors from the whitelist", async function () {
+		const { diamond } = await loadFixture(deployDiamond);
+
+		await diamond.write.addWhitelistedSelectorsBatch([[randomAddress, randomAddress2], [randomSelector1, randomSelector2]]);
+
+		assert.equal(await diamond.read.isWhitelistedSelector([randomAddress, randomSelector1]), true);
+		assert.equal(await diamond.read.isWhitelistedSelector([randomAddress2, randomSelector2]), true);
+
+		await diamond.write.removeWhitelistedSelectorsBatch([[randomAddress, randomAddress2], [randomSelector1, randomSelector2]]);
+
+		assert.equal(await diamond.read.isWhitelistedSelector([randomAddress, randomSelector1]), false);
+		assert.equal(await diamond.read.isWhitelistedSelector([randomAddress2, randomSelector2]), false);
+	});
+
+	it("Should revert on array length mismatch for batch removal", async function () {
+		const { diamond } = await loadFixture(deployDiamond);
+
+		await diamond.write.addWhitelistedSelectorsBatch([[randomAddress, randomAddress2], [randomSelector1, randomSelector2]]);
+
+		await assert.rejects(
+			diamond.write.removeWhitelistedSelectorsBatch([[randomAddress], [randomSelector1, randomSelector2]]),
+			/ArrayLengthMismatch/
+		);
+	});
 });

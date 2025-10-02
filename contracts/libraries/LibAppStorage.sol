@@ -30,16 +30,15 @@ library LibAppStorage {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 constant WHITELIST_MANAGER_ROLE = keccak256("WHITELIST_MANAGER_ROLE");
-    bytes32 constant WHITELISTED_TARGET_ROLE = keccak256("WHITELISTED_TARGET_ROLE");
-    bytes32 constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
 
     // Error definitions
     error ZeroAddress();
     error ZeroAmount();
+    error ArrayLengthMismatch();
+    error ETHValueNotAllowed();
     error Paused();
     error NotAuthorized();
     error InvalidSelector();
-    error TargetNotWhitelisted();
     error SelectorNotWhitelisted();
     error InsufficientBalance();
     error SlippageExceeded();

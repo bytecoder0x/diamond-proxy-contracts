@@ -96,11 +96,6 @@ contract AdminFacet is
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
-        _setRoleAdmin(
-            LibAppStorage.WHITELISTED_TARGET_ROLE,
-            LibAppStorage.WHITELIST_MANAGER_ROLE
-        );
-
         s.permit2 = permit2;
 
         emit Initialized(admin, permit2);

@@ -23,25 +23,22 @@ library LibSelectors {
 
     // ---------------- Whitelist Facet ----------------
     function getWhitelistFacetSelectors() external pure returns (bytes4[] memory selectors) {
-        selectors = new bytes4[](6);
+        selectors = new bytes4[](5);
         selectors[0] = WhitelistFacet.addWhitelistedSelector.selector;
         selectors[1] = WhitelistFacet.removeWhitelistedSelector.selector;
         selectors[2] = WhitelistFacet.addWhitelistedSelectorsBatch.selector;
-        selectors[3] = WhitelistFacet.isWhitelistedSelector.selector;
-        selectors[4] = WhitelistFacet.isWhitelistedTarget.selector;
-        selectors[5] = WhitelistFacet.isCallAllowed.selector;
+        selectors[3] = WhitelistFacet.removeWhitelistedSelectorsBatch.selector;
+        selectors[4] = WhitelistFacet.isWhitelistedSelector.selector;
     }
 
     // ---------------- Execution Facet ----------------
     function getExecutionFacetSelectors() external pure returns (bytes4[] memory selectors) {
-        selectors = new bytes4[](6);
+        selectors = new bytes4[](4);
         selectors[0] = ExecutionFacet.relaySignedSwapCall.selector;
-        selectors[1] = ExecutionFacet.relaySignedSwapCallBatch.selector;
-        selectors[2] = ExecutionFacet.relaySignedTransferCall.selector;
-        selectors[3] = ExecutionFacet.relaySignedTransferCallBatch.selector;
-        selectors[4] = ExecutionFacet.initializeExecutionRelay.selector;
+        selectors[1] = ExecutionFacet.relaySignedTransferCall.selector;
+        selectors[2] = ExecutionFacet.initializeExecutionRelay.selector;
         // nonces function
-        selectors[5] = bytes4(keccak256("nonces(address)"));
+        selectors[3] = bytes4(keccak256("nonces(address)"));
     }
 
     // ---------------- Admin Facet ----------------

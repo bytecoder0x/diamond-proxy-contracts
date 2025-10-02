@@ -25,16 +25,15 @@ interface IExecutionFacet {
         bytes permit2Data;             // Permit2 signature data
     }
 
-    /// @notice Relay multiple signed calls
-    struct BatchArgs {
-        address[] owners;
-        address[] feeTokens;
-        uint256[] feeAmounts;
-        bytes[] feeTokenPermitDatas;
-        bytes[] feePermit2Datas;
-        uint256[] nonces;
-        uint256[] deadlines;
-        bytes[] signatures;
+    /// @notice Relay metadata (fees, signature)
+    struct RelayMeta {
+        address feeToken;
+        uint256 feeAmount;
+        bytes feeTokenPermitData;
+        bytes feePermit2Data;
+        uint256 nonce;
+        uint256 deadline;
+        bytes signature;
     }
 
     event RelayExecuted(address indexed owner, address indexed relayer, address indexed target, bytes4 selector);
@@ -48,6 +47,16 @@ interface IExecutionFacet {
         address tokenOut,
         uint256 amountOut,
         address recipient
+    );
+    
+    event SwapCallFailed(
+        address indexed user,
+        address indexed target,
+        address indexed tokenIn,
+        uint256 amountIn,
+        address tokenOut,
+        address recipient,
+        bytes revertData
     );
     
     event TransferCallExecuted(
@@ -68,36 +77,15 @@ interface IExecutionFacet {
     function relaySignedSwapCall(
         address owner,
         ExecuteSwapCallParams calldata params,
-        address feeToken,
-        uint256 feeAmount,
-        bytes calldata feeTokenPermitData,
-        bytes calldata feePermit2Data,
-        uint256 nonce,
-        uint256 deadline,
-        bytes calldata signature
+        RelayMeta calldata relayMeta
     ) external;
 
     function relaySignedTransferCall(
         address owner,
         ExecuteTransferParams calldata params,
-        address feeToken,
-        uint256 feeAmount,
-        bytes calldata feeTokenPermitData,
-        bytes calldata feePermit2Data,
-        uint256 nonce,
-        uint256 deadline,
-        bytes calldata signature
+        RelayMeta calldata relayMeta
     ) external;
 
-    function relaySignedSwapCallBatch(
-        BatchArgs calldata b,
-        ExecuteSwapCallParams[] calldata params
-    ) external;
-
-    function relaySignedTransferCallBatch(
-        BatchArgs calldata b,
-        ExecuteTransferParams[] calldata params
-    ) external;
 
     function nonces(address owner) external view returns (uint256);
 }

@@ -10,14 +10,11 @@ import {IExecutionFacet} from "./facets/IExecutionFacet.sol";
 /// @dev Combines all facet interfaces for external integration
 interface IDiamondProxy is IDiamondLoupe, IDiamondCut, IExecutionFacet {
     // ============ Whitelist Interface ============
-    function addWhitelistedTarget(address target) external;
-    function removeWhitelistedTarget(address target) external;
     function addWhitelistedSelector(address target, bytes4 selector) external;
     function addWhitelistedSelectorsBatch(address[] calldata targets, bytes4[] calldata selectors) external;
     function removeWhitelistedSelector(address target, bytes4 selector) external;
-    function isWhitelistedTarget(address target) external view returns (bool);
+    function removeWhitelistedSelectorsBatch(address[] calldata targets, bytes4[] calldata selectors) external;
     function isWhitelistedSelector(address target, bytes4 selector) external view returns (bool);
-    function isCallAllowed(address target, bytes4 selector) external view returns (bool);
 
     // ============ Admin Interface ============
     

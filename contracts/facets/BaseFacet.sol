@@ -36,13 +36,5 @@ abstract contract BaseFacet {
         _;
     }
 
-    /// @notice Modifier to check if caller has admin or guardian role
-    modifier onlyAdminOrGuardian() {
-        if (!_hasRole(LibAppStorage.DEFAULT_ADMIN_ROLE, msg.sender) && 
-            !_hasRole(LibAppStorage.GUARDIAN_ROLE, msg.sender)) {
-            revert LibAppStorage.NotAuthorized();
-        }
-        _;
-    }
 }
 
