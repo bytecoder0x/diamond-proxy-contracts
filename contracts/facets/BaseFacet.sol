@@ -36,5 +36,17 @@ abstract contract BaseFacet {
         _;
     }
 
+    /// @notice Modifier to ensure contract is not paused
+    /// @dev Fails closed: if `paused()` is missing or call fails, revert as paused
+    modifier whenNotPaused() {
+        (bool success, bytes memory result) = address(this).staticcall(
+            abi.encodeWithSelector(bytes4(keccak256("paused()")))
+        );
+        if (!success || result.length == 0) revert LibAppStorage.Paused();
+        bool isPaused = abi.decode(result, (bool));
+        if (isPaused) revert LibAppStorage.Paused();
+        _;
+    }
+
 }
 

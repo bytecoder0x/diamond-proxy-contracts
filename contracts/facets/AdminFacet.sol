@@ -59,7 +59,10 @@ contract AdminFacet is
                 abi.encodeWithSelector(IERC20.balanceOf.selector, address(this))
             );
             uint256 withdrawable = abi.decode(queriedBalance, (uint256));
-            if (withdrawable == 0) revert LibAppStorage.ZeroAmount();
+            if (withdrawable == 0) {
+                // Skip zero-balance tokens instead of reverting the whole batch
+                continue;
+            }
             IERC20(token).safeTransfer(s.treasury, withdrawable);
         }
         emit EmergencyWithdrawErc20(tokens);

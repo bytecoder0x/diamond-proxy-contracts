@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {LibAppStorage} from "../libraries/LibAppStorage.sol";
 import {LibPermit} from "../libraries/LibPermit.sol";
+import {IPermit2} from "../interfaces/IPermit2.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
@@ -36,23 +37,6 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     /// "Transfer(address owner,address token,uint256 amount,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline)"
     /// )
     bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x522026e92108289de322fe17f741d35e85cd9e1eeee7688e165675eb683cd7bd;
-
-    /// @notice Reentrancy guard modifier
-    // Use OZ upgradeable guard via initializer in AdminFacet or a dedicated init
-
-    /// @notice Check if the contract is not paused (calls AdminFacet's paused() function)
-    modifier whenNotPaused() {
-        // Call AdminFacet's paused() function through delegatecall
-        (bool success, bytes memory result) = address(this).staticcall(
-            abi.encodeWithSelector(bytes4(keccak256("paused()")))
-        );
-        
-        if (success && result.length > 0) {
-            bool isPaused = abi.decode(result, (bool));
-            if (isPaused) revert LibAppStorage.Paused();
-        }
-        _;
-    }
 
 
     /// @notice Initialize EIP712 and Nonces for this facet (versioned)
@@ -187,14 +171,14 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         address treasury = s.treasury;
         if (treasury == address(0)) revert LibAppStorage.ZeroAddress();
-        _transferFromWithPermit(owner, treasury, feeToken, feeAmount, feeTokenPermitData, feePermit2Data);
+        LibPermit.transferFromWithPermit(feeToken, owner, treasury, feeAmount, feeTokenPermitData, feePermit2Data);
         emit FeeCollected(owner, feeToken, feeAmount, treasury);
     }
 
     function _executeSwapForOwner(address owner, ExecuteSwapCallParams calldata params) internal {
         uint256 balanceBefore = _getBalance(params.tokenOut, params.recipient);
         if (params.amountIn > 0) {
-            _transferFromWithPermit(owner, address(this), params.tokenIn, params.amountIn, params.tokenPermitData, params.permit2Data);
+            LibPermit.transferFromWithPermit(params.tokenIn, owner, address(this), params.amountIn, params.tokenPermitData, params.permit2Data);
             _approveToken(params.tokenIn, params.target, params.amountIn);
         }
         (bool callSuccess, bytes memory retData) = params.target.call(params.callData);
@@ -224,7 +208,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
 
     function _executeTransferForOwner(address owner, ExecuteTransferParams calldata params) internal {
         // TRANSFER_FROM_SELECTOR is always whitelisted
-        _transferFromWithPermit(owner, params.recipient, params.token, params.amount, params.tokenPermitData, params.permit2Data);
+        LibPermit.transferFromWithPermit(params.token, owner, params.recipient, params.amount, params.tokenPermitData, params.permit2Data);
         emit TransferCallExecuted(owner, params.token, params.amount, params.recipient);
     }
 
@@ -251,30 +235,6 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         }
     }
 
-    /// @notice Handle transfer from with permit support
-    /// @param owner Token owner
-    /// @param recipient Recipient of tokens
-    /// @param token Token address
-    /// @param amount Amount to transfer
-    /// @param tokenPermitData EIP-2612/DAI permit data
-    /// @param permit2Data Permit2 signature data
-    function _transferFromWithPermit(
-        address owner,
-        address recipient,
-        address token,
-        uint256 amount,
-        bytes calldata tokenPermitData,
-        bytes calldata permit2Data
-    ) internal {
-        if (tokenPermitData.length > 0) {
-            LibPermit.makeTokenPermit(token, owner, tokenPermitData);
-        }
-        if (permit2Data.length > 0) {
-            LibPermit.makePermit2(token, owner, amount, permit2Data);
-        }
-        _transferPayment(token, owner, recipient, amount);
-    }
-
     /// @notice Approve token to target contract
     /// @param token Token address
     /// @param target Target contract address
@@ -289,18 +249,6 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
                 tokenContract.forceApprove(target, 0);
             }
             tokenContract.forceApprove(target, amount);
-        }
-    }
-
-    /// @notice Transfer payment from owner to recipient
-    /// @dev while we do not support permit 2, transfer via diamond
-    /// @param token Token address
-    /// @param owner Owner of tokens
-    /// @param to Recipient address
-    /// @param amount Amount to transfer
-    function _transferPayment(address token, address owner, address to, uint256 amount) internal {
-        if (amount > 0) {
-            IERC20(token).transferFrom(owner, to, amount);
         }
     }
 

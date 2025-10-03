@@ -29,7 +29,7 @@ contract DiamondDeployer {
             revert InvalidDeploymentArgs();
         }
         
-        // Deploy Diamond with DiamondCutFacet
+        // Deploy Diamond with DiamondCutFacet and set owner to deployer temporarily
         Diamond diamondProxy = new Diamond(address(this), args.diamondCutFacet);
         diamond = address(diamondProxy);
         
@@ -75,7 +75,7 @@ contract DiamondDeployer {
             initArgs
         );
         
-        // Execute diamond cut with initialization
+        // Execute diamond cut with initialization (owner = deployer at this point)
         IDiamondCut(diamond).diamondCut(cuts, args.diamondInit, initCalldata);
 
         // Initialize AccessControl roles via AdminFacet
@@ -83,6 +83,12 @@ contract DiamondDeployer {
             args.admin,
             args.permit2
         );
+
+        // Note: initializeExecutionRelay() is executed in the Ignition setup module by the admin
+
+        // Transfer immutable ownership to admin
+        (bool ok, ) = diamond.call(abi.encodeWithSignature("transferOwnership(address)", args.admin));
+        require(ok, "transferOwnership failed");
         
         emit DiamondDeployed(
             diamond,

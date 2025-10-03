@@ -16,16 +16,8 @@ contract DiamondCutFacet is IDiamondCut, BaseFacet {
         address _init,
         bytes calldata _calldata
     ) external override {
-        // Bootstrap: if AccessControl's hasRole is not yet added, allow diamondCut
-        // Otherwise, enforce DEFAULT_ADMIN_ROLE via BaseFacet
-        bytes4 hasRoleSel = bytes4(keccak256("hasRole(bytes32,address)"));
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        address hasRoleFacet = ds.selectorToFacetAndPosition[hasRoleSel].facetAddress;
-        if (hasRoleFacet != address(0)) {
-            if (!_hasRole(LibAppStorage.DEFAULT_ADMIN_ROLE, msg.sender)) {
-                revert LibAppStorage.NotAuthorized();
-            }
-        }
+        // Enforce immutable owner-only upgrades (fail-closed)
+        LibDiamond.enforceIsContractOwner();
         LibDiamond.diamondCut(_diamondCut, _init, _calldata);
     }
 }
