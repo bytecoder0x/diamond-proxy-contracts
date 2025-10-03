@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {LibDiamond} from "./libraries/LibDiamond.sol";
-import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import { LibDiamond } from "./libraries/LibDiamond.sol";
+import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 
 /// @title Diamond
 /// @notice Main Diamond contract implementing ERC-2535 Diamond Standard

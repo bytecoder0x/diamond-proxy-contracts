@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import {LibAppStorage} from "./LibAppStorage.sol";
-import {IPermit2} from "../interfaces/IPermit2.sol";
-import {IDaiLikePermit} from "../interfaces/IDaiLikePermit.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { LibAppStorage } from "./LibAppStorage.sol";
+import { IPermit2 } from "../interfaces/IPermit2.sol";
+import { IDaiLikePermit } from "../interfaces/IDaiLikePermit.sol";
 
 /// @notice Permit2 interface for token approvals
 // External interfaces moved to src/interfaces/
@@ -110,8 +110,7 @@ library LibPermit {
         if (!_tryPermit(token, owner, spender, permit)) revert PermitFailed();
     }
 
-    
-    /// @dev Tries to make a permit with the given permit data 
+    /// @dev Tries to make a permit with the given permit data
     /// @dev That function from one inch (https://www.codeslaw.app/contracts/ethereum/0x111111125421cA6dc452d289314280a0f8842A65)
     /// @param token The address of the token
     /// @param owner The address of the owner of the token
@@ -229,5 +228,4 @@ library LibPermit {
             }
         }
     }
-
 }

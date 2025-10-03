@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {DiamondLoupeFacet} from "../facets/DiamondLoupeFacet.sol";
-import {WhitelistFacet} from "../facets/WhitelistFacet.sol";
-import {ExecutionFacet} from "../facets/ExecutionFacet.sol";
-import {AdminFacet} from "../facets/AdminFacet.sol";
+import { DiamondLoupeFacet } from "../facets/DiamondLoupeFacet.sol";
+import { WhitelistFacet } from "../facets/WhitelistFacet.sol";
+import { ExecutionFacet } from "../facets/ExecutionFacet.sol";
+import { AdminFacet } from "../facets/AdminFacet.sol";
 
 /// @title SelectorsLib
 /// @notice Provides precomputed function selectors for Diamond facets
 /// @dev Avoids inline keccak256 calls inside DiamondDeployer to reduce bytecode size
 library LibSelectors {
-
     // ---------------- Loupe Facet ----------------
     function getLoupeFacetSelectors() external pure returns (bytes4[] memory selectors) {
         selectors = new bytes4[](5);

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {LibAppStorage} from "../libraries/LibAppStorage.sol";
-import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { LibAppStorage } from "../libraries/LibAppStorage.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { MulticallUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 
 /// @title AdminFacet
 /// @notice Administrative functions using Diamond-compatible OpenZeppelin patterns
@@ -46,9 +46,7 @@ contract AdminFacet is
      * @dev This function allows withdrawal of multiple ERC20 tokens in case of an emergency. Can only be called by an admin.
      * @param tokens An array of ERC20 token addresses to be withdrawn.
      */
-    function emergencyWithdrawErc20(
-        address[] memory tokens
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function emergencyWithdrawErc20(address[] memory tokens) external onlyRole(DEFAULT_ADMIN_ROLE) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (s.treasury == address(0)) revert LibAppStorage.ZeroAddress();
         uint256 length = tokens.length;
@@ -82,10 +80,7 @@ contract AdminFacet is
         emit EmergencyWithdrawEth(currentBalance);
     }
 
-    function initialize(
-        address admin,
-        address permit2
-    ) external initializer {
+    function initialize(address admin, address permit2) external initializer {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
 
         if (admin == address(0) || permit2 == address(0)) {
@@ -120,9 +115,7 @@ contract AdminFacet is
     }
 
     /// @notice Set treasury address for fee collection
-    function setTreasury(
-        address treasury
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTreasury(address treasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (treasury == address(0)) revert LibAppStorage.ZeroAddress();
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         s.treasury = treasury;
@@ -134,5 +127,4 @@ contract AdminFacet is
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         return s.treasury;
     }
-
 }

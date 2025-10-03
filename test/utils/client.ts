@@ -1,7 +1,7 @@
-import { network } from "hardhat";
+import { network } from 'hardhat';
 
 export const {
-	viem,
-	networkHelpers: { loadFixture },
-} = await network.connect("hardhatMainnet");
+  viem,
+  networkHelpers: { loadFixture },
+} = await network.connect('hardhatMainnet');
 export const publicClient = await viem.getPublicClient();

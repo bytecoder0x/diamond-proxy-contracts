@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IDiamondCut} from "../interfaces/IDiamondCut.sol";
+import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 
 /// @title LibDiamond
 /// @notice Diamond storage and management library (ERC-2535)
 /// @dev Remember to add the loupe functions from DiamondLoupeContract to the diamond.
 /// The loupe functions are required by the EIP2535 Diamonds standard
 library LibDiamond {
-
     struct FacetAddressAndPosition {
         address facetAddress;
         uint96 functionSelectorPosition; // position in facetFunctionSelectors.functionSelectors array
@@ -42,7 +41,6 @@ library LibDiamond {
             ds.slot := position
         }
     }
-
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);

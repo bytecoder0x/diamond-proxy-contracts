@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {LibAppStorage} from "../libraries/LibAppStorage.sol";
-import {BaseFacet} from "./BaseFacet.sol";
+import { LibAppStorage } from "../libraries/LibAppStorage.sol";
+import { BaseFacet } from "./BaseFacet.sol";
 
 /// @title WhitelistFacet
 /// @notice Manages whitelisted targets and selectors for the Diamond
@@ -17,11 +17,14 @@ contract WhitelistFacet is BaseFacet {
     /// @notice Add a selector to the whitelist for a target
     /// @param target Target contract address
     /// @param selector Function selector to whitelist
-    function addWhitelistedSelector(address target, bytes4 selector) external onlyRole(LibAppStorage.WHITELIST_MANAGER_ROLE) {
+    function addWhitelistedSelector(
+        address target,
+        bytes4 selector
+    ) external onlyRole(LibAppStorage.WHITELIST_MANAGER_ROLE) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (target == address(0)) revert LibAppStorage.ZeroAddress();
         if (selector == bytes4(0)) revert LibAppStorage.InvalidSelector();
-        
+
         s.whitelistedSelectors[target][selector] = true;
         emit SelectorWhitelisted(target, selector, true);
     }
@@ -29,7 +32,10 @@ contract WhitelistFacet is BaseFacet {
     /// @notice Remove a selector from the whitelist for a target
     /// @param target Target contract address
     /// @param selector Function selector to remove
-    function removeWhitelistedSelector(address target, bytes4 selector) external onlyRole(LibAppStorage.WHITELIST_MANAGER_ROLE) {
+    function removeWhitelistedSelector(
+        address target,
+        bytes4 selector
+    ) external onlyRole(LibAppStorage.WHITELIST_MANAGER_ROLE) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         s.whitelistedSelectors[target][selector] = false;
         emit SelectorWhitelisted(target, selector, false);
@@ -44,14 +50,14 @@ contract WhitelistFacet is BaseFacet {
     ) external onlyRole(LibAppStorage.WHITELIST_MANAGER_ROLE) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (targets.length != selectors.length) revert LibAppStorage.ArrayLengthMismatch();
-        
+
         for (uint256 i = 0; i < targets.length; ++i) {
             address target = targets[i];
             bytes4 selector = selectors[i];
-            
+
             if (target == address(0)) revert LibAppStorage.ZeroAddress();
             if (selector == bytes4(0)) revert LibAppStorage.InvalidSelector();
-            
+
             s.whitelistedSelectors[target][selector] = true;
             emit SelectorWhitelisted(target, selector, true);
         }
@@ -79,7 +85,6 @@ contract WhitelistFacet is BaseFacet {
         }
     }
 
-
     /// @notice Check if a selector is whitelisted for a target
     /// @param target Target contract address
     /// @param selector Function selector
@@ -88,5 +93,4 @@ contract WhitelistFacet is BaseFacet {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         return s.whitelistedSelectors[target][selector];
     }
-
 }

@@ -5,24 +5,24 @@ pragma solidity 0.8.30;
 interface IExecutionFacet {
     /// @notice Parameters for executing a call with ERC20 tokens
     struct ExecuteSwapCallParams {
-        address target;                // Target contract to call
-        bytes callData;                // Call data to execute
-        address tokenIn;               // Input token address (address(0) for ETH)
-        uint256 amountIn;              // Input token amount
-        address tokenOut;              // Output token address (address(0) for ETH)
-        uint256 amountOutMin;          // Minimum output amount (slippage protection)
-        address recipient;             // Recipient of output tokens
-        bytes tokenPermitData;         // EIP-2612/DAI permit data
-        bytes permit2Data;             // Permit2 signature data
+        address target; // Target contract to call
+        bytes callData; // Call data to execute
+        address tokenIn; // Input token address (address(0) for ETH)
+        uint256 amountIn; // Input token amount
+        address tokenOut; // Output token address (address(0) for ETH)
+        uint256 amountOutMin; // Minimum output amount (slippage protection)
+        address recipient; // Recipient of output tokens
+        bytes tokenPermitData; // EIP-2612/DAI permit data
+        bytes permit2Data; // Permit2 signature data
     }
 
     /// @notice Parameters for executing ERC20 transfer
     struct ExecuteTransferParams {
-        address token;                 // Token address (ERC20)
-        uint256 amount;                // Amount to transfer
-        address recipient;             // Recipient of tokens
-        bytes tokenPermitData;         // EIP-2612/DAI permit data
-        bytes permit2Data;             // Permit2 signature data
+        address token; // Token address (ERC20)
+        uint256 amount; // Amount to transfer
+        address recipient; // Recipient of tokens
+        bytes tokenPermitData; // EIP-2612/DAI permit data
+        bytes permit2Data; // Permit2 signature data
     }
 
     /// @notice Relay metadata (fees, signature)
@@ -48,7 +48,7 @@ interface IExecutionFacet {
         uint256 amountOut,
         address recipient
     );
-    
+
     event SwapCallFailed(
         address indexed user,
         address indexed target,
@@ -58,19 +58,10 @@ interface IExecutionFacet {
         address recipient,
         bytes revertData
     );
-    
-    event TransferCallExecuted(
-        address indexed owner,
-        address indexed token,
-        uint256 amount,
-        address indexed recipient
-    );
 
-    event SimpleCallExecuted(
-        address indexed user,
-        address indexed target,
-        bytes callData
-    );
+    event TransferCallExecuted(address indexed owner, address indexed token, uint256 amount, address indexed recipient);
+
+    event SimpleCallExecuted(address indexed user, address indexed target, bytes callData);
 
     function initializeExecutionRelay() external;
 
@@ -85,7 +76,6 @@ interface IExecutionFacet {
         ExecuteTransferParams calldata params,
         RelayMeta calldata relayMeta
     ) external;
-
 
     function nonces(address owner) external view returns (uint256);
 }

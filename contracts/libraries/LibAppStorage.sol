@@ -7,14 +7,13 @@ pragma solidity 0.8.30;
 library LibAppStorage {
     bytes32 constant APP_STORAGE_POSITION = keccak256("diamond.standard.app.storage");
 
-    struct AppStorage {        
+    struct AppStorage {
         // Whitelist state (selectors only; targets are AccessControl roles)
         mapping(address => mapping(bytes4 => bool)) whitelistedSelectors;
         // Note: Pause state is handled by OpenZeppelin Pausable in AdminFacet
-        
+
         // Permit state
         address permit2;
-        
         // Treasury for relayer fee collection
         address treasury;
     }

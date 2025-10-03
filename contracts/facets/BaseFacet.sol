@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {LibAppStorage} from "../libraries/LibAppStorage.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
+import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 
 /// @title BaseFacet
 /// @notice Base contract for all facets that need access control
@@ -19,11 +19,11 @@ abstract contract BaseFacet {
         (bool success, bytes memory result) = address(this).staticcall(
             abi.encodeWithSelector(IAccessControl.hasRole.selector, role, account)
         );
-        
+
         if (success && result.length > 0) {
             return abi.decode(result, (bool));
         }
-        
+
         return false;
     }
 
@@ -47,6 +47,4 @@ abstract contract BaseFacet {
         if (isPaused) revert LibAppStorage.Paused();
         _;
     }
-
 }
-

@@ -24,9 +24,9 @@ This document describes the Diamond (EIP‑2535) system, facets, libraries, stor
 
 ### Call Flow
 
-1) User/relayer calls the Diamond.
-2) Diamond `fallback` routes by selector → facet via `delegatecall`.
-3) Facet executes using Diamond’s storage (diamond storage and facet/OZ state live at the Diamond address).
+1. User/relayer calls the Diamond.
+2. Diamond `fallback` routes by selector → facet via `delegatecall`.
+3. Facet executes using Diamond’s storage (diamond storage and facet/OZ state live at the Diamond address).
 
 ---
 
@@ -47,6 +47,7 @@ Bootstrap security: `DiamondCutFacet.diamondCut` allows the first cut without ad
 ## Storage Layout
 
 ### Diamond Storage (routing, ERC‑165)
+
 - `LibDiamond.DiamondStorage` at slot `keccak256("diamond.standard.diamond.storage")`:
   - `mapping(bytes4 => FacetAddressAndPosition) selectorToFacetAndPosition`
   - `mapping(address => FacetFunctionSelectors) facetFunctionSelectors`
@@ -54,6 +55,7 @@ Bootstrap security: `DiamondCutFacet.diamondCut` allows the first cut without ad
   - `mapping(bytes4 => bool) supportedInterfaces`
 
 ### App Storage (application state)
+
 - `LibAppStorage.AppStorage` at slot `keccak256("diamond.standard.app.storage")`:
   - `mapping(address => mapping(bytes4 => bool)) whitelistedSelectors`
   - `address permit2`
@@ -65,6 +67,7 @@ Bootstrap security: `DiamondCutFacet.diamondCut` allows the first cut without ad
 - Common errors: `ZeroAddress`, `ZeroAmount`, `ArrayLengthMismatch`, `ETHValueNotAllowed`, `Paused`, `NotAuthorized`, `InvalidSelector`, `SelectorNotWhitelisted`, `InsufficientBalance`, `SlippageExceeded`, `CallFailed`, `EmergencyPause`.
 
 ### OZ Upgradeable State in Facets
+
 - `AdminFacet` and `ExecutionFacet` inherit upgradeable OZ contracts (AccessControlEnumerable, Pausable, ReentrancyGuard, Multicall, EIP712, Nonces). Their storage variables are laid out in Diamond storage (through delegatecall) as per OZ’s upgradeable layout. Avoid adding new base classes with storage to existing facets unless storage layout compatibility is validated.
 
 ---
@@ -82,12 +85,14 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
 ## Contracts & Facets
 
 ### Diamond.sol (Proxy Entrypoint)
+
 - Constructor: seeds Diamond with `diamondCut` selector from provided `DiamondCutFacet` address via `LibDiamond.diamondCut`.
 - `fallback()`: delegatecall routing by selector; reverts with `FunctionNotFound` if unmapped.
 - `receive()`: accepts ETH.
 - Errors: `FunctionNotFound(bytes4)`.
 
 ### DiamondDeployer.sol (Composer)
+
 - `deployDiamond(DeploymentArgs) → address diamond`:
   - Validates non‑zero `admin` and `permit2`.
   - Deploys Diamond with `DiamondCutFacet`.
@@ -98,22 +103,26 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
 - Errors: `InvalidDeploymentArgs()`.
 
 ### DiamondInit.sol (Initializer)
+
 - `init(InitArgs { admin, permit2 })`:
   - Sets ERC‑165 support flags for `IERC165`, `IDiamondCut`, `IDiamondLoupe`.
   - Seeds `LibAppStorage.AppStorage.permit2`.
   - Emits `DiamondInitialized(admin, permit2)`.
 
 ### DiamondCutFacet.sol
+
 - `diamondCut(FacetCut[] _diamondCut, address _init, bytes _calldata)`:
   - Bootstrap: If `hasRole(bytes32,address)` is not present yet, allow cut. Else require `DEFAULT_ADMIN_ROLE` via `BaseFacet._hasRole`.
   - Calls `LibDiamond.diamondCut` (emits `DiamondCut` and executes optional initializer).
 
 ### DiamondLoupeFacet.sol
+
 - Standard ERC‑2535 loupe:
   - `facets()`, `facetFunctionSelectors(address)`, `facetAddresses()`, `facetAddress(bytes4)`
   - `supportsInterface(bytes4)` (delegates to `LibDiamond`’s supportedInterfaces).
 
 ### AdminFacet.sol
+
 - Inherits: `AccessControlEnumerableUpgradeable`, `PausableUpgradeable`, `ReentrancyGuardUpgradeable`, `MulticallUpgradeable`.
 - Events: `EmergencyWithdrawErc20(address[] tokens)`, `EmergencyWithdrawEth(uint256 amount)`, `Initialized(address admin, address permit2)`, `TreasuryChanged(address treasury)`, `Permit2AddressChanged(address oldPermit2, address newPermit2)`.
 - Errors (declared): `EmergencyRescueNotAllowed()`, `TransferFailed()`.
@@ -134,6 +143,7 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
     - Multicall: `multicall(bytes[])`.
 
 ### WhitelistFacet.sol
+
 - Event: `SelectorWhitelisted(address target, bytes4 selector, bool whitelisted)`.
 - Functions [only WHITELIST_MANAGER_ROLE]:
   - `addWhitelistedSelector(address target, bytes4 selector)`
@@ -144,6 +154,7 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
   - `isWhitelistedSelector(address target, bytes4 selector) → bool`
 
 ### ExecutionFacet.sol
+
 - Inherits: `EIP712Upgradeable`, `NoncesUpgradeable`, `ReentrancyGuardUpgradeable`, `BaseFacet`.
 - Constants:
   - `TRANSFER_FROM_SELECTOR = 0xa85e59e4`
@@ -171,6 +182,7 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
 ## Libraries
 
 ### LibDiamond
+
 - Diamond storage accessors and helpers.
 - `diamondCut(FacetCut[], address _init, bytes _calldata)` implements Add/Replace/Remove with checks; emits `DiamondCut` and optionally `delegatecall`s initializer.
 - Ensures facet code exists, prevents duplicates, guards immutable functions (in Diamond).
@@ -178,10 +190,12 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
 - Errors: `IncorrectFacetCutAction`, `NoSelectorsProvidedForFacetForCut`, `CannotAddSelectorsToZeroAddress`, `CannotAddFunctionToDiamondThatAlreadyExists`, `CannotReplaceSelectorsFromZeroAddress`, `CannotReplaceFunctionWithTheSameFunctionFromTheSameFacet`, `RemoveFacetAddressMustBeZeroAddress`, `CannotRemoveFunctionThatDoesNotExist`, `CannotRemoveImmutableFunction`, `InitializationFunctionReverted`, `NoBytecodeAtAddress`.
 
 ### LibAppStorage
+
 - App storage layout and constants.
 - Provides typed errors used across facets.
 
 ### LibPermit
+
 - Unified permit handling supporting:
   - EIP‑2612 (`IERC20Permit.permit`), DAI‑like (`IDaiLikePermit.permit`), and Uniswap’s Permit2 (`IPermit2`)
 - Key functions:
@@ -193,6 +207,7 @@ Granting roles is done via `AdminFacet` (OZ AccessControl API). Initial admin is
 - Errors: `PermitFailed`, `PermitLengthError`, `InputOverflow`.
 
 ### LibSelectors
+
 - Pure helpers returning precomputed selector arrays for each facet. Used by `DiamondDeployer` to reduce runtime keccak costs.
 
 ---
@@ -274,7 +289,7 @@ Note: `IDiamondProxy` is a superset interface for convenience; not every declare
 
 ```ts
 // viem + hardhat-viem style
-const diamond = await viem.getContractAt("IDiamondProxy", diamondAddress);
+const diamond = await viem.getContractAt('IDiamondProxy', diamondAddress);
 
 // Bootstrap after deploy: grant roles
 await diamond.write.grantRole([WHITELIST_MANAGER_ROLE, manager]);
@@ -298,10 +313,17 @@ await diamond.write.initializeExecutionRelay([]); // once by admin
 await diamond.write.relaySignedSwapCall([
   owner,
   {
-    target, callData, tokenIn, amountIn, tokenOut, amountOutMin, recipient,
-    tokenPermitData, permit2Data
+    target,
+    callData,
+    tokenIn,
+    amountIn,
+    tokenOut,
+    amountOutMin,
+    recipient,
+    tokenPermitData,
+    permit2Data,
   },
-  { feeToken, feeAmount, feeTokenPermitData, feePermit2Data, nonce, deadline, signature }
+  { feeToken, feeAmount, feeTokenPermitData, feePermit2Data, nonce, deadline, signature },
 ]);
 ```
 

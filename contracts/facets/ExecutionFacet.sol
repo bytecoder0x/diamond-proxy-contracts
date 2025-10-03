@@ -1,25 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {LibAppStorage} from "../libraries/LibAppStorage.sol";
-import {LibPermit} from "../libraries/LibPermit.sol";
-import {IPermit2} from "../interfaces/IPermit2.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { LibAppStorage } from "../libraries/LibAppStorage.sol";
+import { LibPermit } from "../libraries/LibPermit.sol";
+import { IPermit2 } from "../interfaces/IPermit2.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { EIP712Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import { NoncesUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 
 /// @title ExecutionFacet
 /// @notice Generic execution facet for whitelisted contract calls
 /// @dev Handles token transfers, approvals, and external calls with slippage protection
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import {BaseFacet} from "./BaseFacet.sol";
-import {IExecutionFacet} from "../interfaces/facets/IExecutionFacet.sol";
+import { BaseFacet } from "./BaseFacet.sol";
+import { IExecutionFacet } from "../interfaces/facets/IExecutionFacet.sol";
 
-contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable, ReentrancyGuardUpgradeable, BaseFacet {
+contract ExecutionFacet is
+    IExecutionFacet,
+    EIP712Upgradeable,
+    NoncesUpgradeable,
+    ReentrancyGuardUpgradeable,
+    BaseFacet
+{
     using SafeERC20 for IERC20;
     using Address for address;
     using LibAppStorage for LibAppStorage.AppStorage;
@@ -30,21 +36,21 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     /// keccak256(
     /// "Swap(address owner,address target,address tokenIn,address tokenOut,uint256 amountIn,uint256 amountOutMin,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline,bytes32 callData)"
     /// )
-    bytes32 public constant SIGNED_SWAP_CALL_TYPEHASH = 0x5920ea0bb4824da9c3fbd9a09667b5d360c30ccf190a57e91874c99b00c90784;
+    bytes32 public constant SIGNED_SWAP_CALL_TYPEHASH =
+        0x5920ea0bb4824da9c3fbd9a09667b5d360c30ccf190a57e91874c99b00c90784;
 
     /// @dev EIP-712 typehash for Transfer execution with fee
     /// keccak256(
     /// "Transfer(address owner,address token,uint256 amount,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline)"
     /// )
-    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH = 0x522026e92108289de322fe17f741d35e85cd9e1eeee7688e165675eb683cd7bd;
-
+    bytes32 public constant SIGNED_TRANSFER_CALL_TYPEHASH =
+        0x522026e92108289de322fe17f741d35e85cd9e1eeee7688e165675eb683cd7bd;
 
     /// @notice Initialize EIP712 and Nonces for this facet (versioned)
     function initializeExecutionRelay() external reinitializer(2) onlyRole(LibAppStorage.DEFAULT_ADMIN_ROLE) {
         __EIP712_init("DiamondProxy", "1");
         __Nonces_init();
     }
-
 
     /// @notice Relay a single signed swap call with optional fee in a different token
     function relaySignedSwapCall(
@@ -53,9 +59,23 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
         _validateCall(params.target, params.tokenIn, params.callData);
-        _verifyAndConsumeSwap(owner, params, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.nonce, relayMeta.deadline, relayMeta.signature);
+        _verifyAndConsumeSwap(
+            owner,
+            params,
+            relayMeta.feeToken,
+            relayMeta.feeAmount,
+            relayMeta.nonce,
+            relayMeta.deadline,
+            relayMeta.signature
+        );
         if (params.tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
-        _collectFee(owner, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.feeTokenPermitData, relayMeta.feePermit2Data);
+        _collectFee(
+            owner,
+            relayMeta.feeToken,
+            relayMeta.feeAmount,
+            relayMeta.feeTokenPermitData,
+            relayMeta.feePermit2Data
+        );
         _executeSwapForOwner(owner, params);
         bytes4 selector = bytes4(params.callData[:4]);
         emit RelayExecuted(owner, msg.sender, params.target, selector);
@@ -67,20 +87,28 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
         ExecuteTransferParams calldata params,
         RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
-        _verifyAndConsumeTransfer(owner, params, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.nonce, relayMeta.deadline, relayMeta.signature);
+        _verifyAndConsumeTransfer(
+            owner,
+            params,
+            relayMeta.feeToken,
+            relayMeta.feeAmount,
+            relayMeta.nonce,
+            relayMeta.deadline,
+            relayMeta.signature
+        );
         if (params.token == address(0)) revert LibAppStorage.ZeroAddress();
-        _collectFee(owner, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.feeTokenPermitData, relayMeta.feePermit2Data);
+        _collectFee(
+            owner,
+            relayMeta.feeToken,
+            relayMeta.feeAmount,
+            relayMeta.feeTokenPermitData,
+            relayMeta.feePermit2Data
+        );
         _executeTransferForOwner(owner, params);
         emit RelayExecuted(owner, msg.sender, params.token, TRANSFER_FROM_SELECTOR);
     }
 
-
-    function nonces(address owner) 
-        public 
-        view 
-        override(NoncesUpgradeable, IExecutionFacet) 
-        returns (uint256) 
-    {
+    function nonces(address owner) public view override(NoncesUpgradeable, IExecutionFacet) returns (uint256) {
         return super.nonces(owner);
     }
 
@@ -178,7 +206,14 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     function _executeSwapForOwner(address owner, ExecuteSwapCallParams calldata params) internal {
         uint256 balanceBefore = _getBalance(params.tokenOut, params.recipient);
         if (params.amountIn > 0) {
-            LibPermit.transferFromWithPermit(params.tokenIn, owner, address(this), params.amountIn, params.tokenPermitData, params.permit2Data);
+            LibPermit.transferFromWithPermit(
+                params.tokenIn,
+                owner,
+                address(this),
+                params.amountIn,
+                params.tokenPermitData,
+                params.permit2Data
+            );
             _approveToken(params.tokenIn, params.target, params.amountIn);
         }
         (bool callSuccess, bytes memory retData) = params.target.call(params.callData);
@@ -187,7 +222,15 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
             if (params.amountIn > 0) {
                 IERC20(params.tokenIn).safeTransfer(owner, params.amountIn);
             }
-            emit SwapCallFailed(owner, params.target, params.tokenIn, params.amountIn, params.tokenOut, params.recipient, retData);
+            emit SwapCallFailed(
+                owner,
+                params.target,
+                params.tokenIn,
+                params.amountIn,
+                params.tokenOut,
+                params.recipient,
+                retData
+            );
             return;
         }
         uint256 balanceAfter = _getBalance(params.tokenOut, params.recipient);
@@ -208,7 +251,14 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
 
     function _executeTransferForOwner(address owner, ExecuteTransferParams calldata params) internal {
         // TRANSFER_FROM_SELECTOR is always whitelisted
-        LibPermit.transferFromWithPermit(params.token, owner, params.recipient, params.amount, params.tokenPermitData, params.permit2Data);
+        LibPermit.transferFromWithPermit(
+            params.token,
+            owner,
+            params.recipient,
+            params.amount,
+            params.tokenPermitData,
+            params.permit2Data
+        );
         emit TransferCallExecuted(owner, params.token, params.amount, params.recipient);
     }
 
@@ -222,7 +272,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
 
         if (callData.length < 4) revert LibAppStorage.InvalidSelector();
         bytes4 selector = bytes4(callData[:4]);
-        
+
         _validateCallSelector(target, selector);
     }
 
@@ -242,7 +292,7 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
     function _approveToken(address token, address target, uint256 amount) internal {
         IERC20 tokenContract = IERC20(token);
         uint256 currentAllowance = tokenContract.allowance(address(this), target);
-        
+
         if (currentAllowance < amount) {
             // First reset to 0 if needed (some tokens require this)
             if (currentAllowance > 0) {
@@ -263,5 +313,4 @@ contract ExecutionFacet is IExecutionFacet, EIP712Upgradeable, NoncesUpgradeable
             return IERC20(token).balanceOf(account);
         }
     }
-
 }
