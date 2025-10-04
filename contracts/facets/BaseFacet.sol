@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {LibAppStorage} from "../libraries/LibAppStorage.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
+import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 
 /// @title BaseFacet
 /// @notice Base contract for all facets that need access control
@@ -19,11 +19,11 @@ abstract contract BaseFacet {
         (bool success, bytes memory result) = address(this).staticcall(
             abi.encodeWithSelector(IAccessControl.hasRole.selector, role, account)
         );
-        
+
         if (success && result.length > 0) {
             return abi.decode(result, (bool));
         }
-        
+
         return false;
     }
 
@@ -36,13 +36,15 @@ abstract contract BaseFacet {
         _;
     }
 
-    /// @notice Modifier to check if caller has admin or guardian role
-    modifier onlyAdminOrGuardian() {
-        if (!_hasRole(LibAppStorage.DEFAULT_ADMIN_ROLE, msg.sender) && 
-            !_hasRole(LibAppStorage.GUARDIAN_ROLE, msg.sender)) {
-            revert LibAppStorage.NotAuthorized();
-        }
+    /// @notice Modifier to ensure contract is not paused
+    /// @dev Fails closed: if `paused()` is missing or call fails, revert as paused
+    modifier whenNotPaused() {
+        (bool success, bytes memory result) = address(this).staticcall(
+            abi.encodeWithSelector(bytes4(keccak256("paused()")))
+        );
+        if (!success || result.length == 0) revert LibAppStorage.Paused();
+        bool isPaused = abi.decode(result, (bool));
+        if (isPaused) revert LibAppStorage.Paused();
         _;
     }
 }
-

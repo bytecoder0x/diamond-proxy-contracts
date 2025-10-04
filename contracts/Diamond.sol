@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {LibDiamond} from "./libraries/LibDiamond.sol";
-import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import { LibDiamond } from "./libraries/LibDiamond.sol";
+import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 
 /// @title Diamond
 /// @notice Main Diamond contract implementing ERC-2535 Diamond Standard
 /// @dev This is the main proxy contract that delegates calls to facets
 contract Diamond {
-    constructor(address /* _contractOwner */, address _diamondCutFacet) payable {
+    constructor(address _contractOwner, address _diamondCutFacet) {
+        // Set immutable contract owner in diamond storage
+        LibDiamond.setContractOwner(_contractOwner);
         // Add the diamondCut external function from the diamondCutFacet
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
         bytes4[] memory functionSelectors = new bytes4[](1);
@@ -57,4 +59,15 @@ contract Diamond {
     receive() external payable {}
 
     error FunctionNotFound(bytes4 _functionSelector);
+
+    // ERC-173 style ownership (immutable functions on the diamond)
+
+    function owner() external view returns (address) {
+        return LibDiamond.contractOwner();
+    }
+
+    function transferOwnership(address _newOwner) external {
+        LibDiamond.enforceIsContractOwner();
+        LibDiamond.setContractOwner(_newOwner);
+    }
 }

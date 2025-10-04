@@ -14,5 +14,3 @@ interface IDaiLikePermit {
         bytes32 s
     ) external;
 }
-
-

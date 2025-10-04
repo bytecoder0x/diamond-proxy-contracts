@@ -5,7 +5,11 @@ pragma solidity 0.8.30;
 /// @notice Interface for Diamond Facet management (ERC-2535)
 /// @dev Add/replace/remove any number of functions and optionally execute a function with delegatecall
 interface IDiamondCut {
-    enum FacetCutAction {Add, Replace, Remove}
+    enum FacetCutAction {
+        Add,
+        Replace,
+        Remove
+    }
 
     struct FacetCut {
         address facetAddress;
