@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
+import { parseEther } from 'viem';
+
+import { loadFixture, publicClient, viem } from '../utils/client.js';
 import { PERMIT2_ADDRESS, ZERO_ADDRESS } from '../utils/constant.js';
 import { deployDiamond } from '../utils/deploy-diamond.js';
-import { loadFixture, publicClient } from '../utils/client.js';
 import { getRandomAddress } from '../utils/helpers.js';
-import { parseEther } from 'viem';
 
 describe('AdminFacet', async function () {
   it('Should correctly pause and unpause the diamond', async function () {
@@ -17,13 +19,6 @@ describe('AdminFacet', async function () {
     await diamond.write.unpause();
     const unpaused = await diamond.read.paused();
     assert.equal(unpaused, false);
-  });
-
-  // removed: setPermit2 has been dropped from AdminFacet; keeping read-only check instead
-  it('Should have the initial permit2 address set', async function () {
-    const { diamond } = await loadFixture(deployDiamond);
-    const currentPermit2 = await diamond.read.getPermit2();
-    assert.equal(currentPermit2, PERMIT2_ADDRESS);
   });
 
   it('Should correctly set the treasury address', async function () {
@@ -78,5 +73,77 @@ describe('AdminFacet', async function () {
     const newBalanceOfDiamond = await publicClient.getBalance({ address: diamond.address });
     assert.equal(balanceOfTreasury, lostAmount);
     assert.equal(newBalanceOfDiamond, 0n);
+  });
+
+  it('Should prevent to withdraw if the treasury is the zero address', async function () {
+    const { admin, mockToken } = await loadFixture(deployDiamond);
+    const newAdminFacet = await viem.deployContract('AdminFacet');
+
+    await newAdminFacet.write.initialize([admin.account.address, PERMIT2_ADDRESS]);
+    await assert.rejects(
+      newAdminFacet.write.emergencyWithdrawErc20([[mockToken.address]]),
+      /ZeroAddress/,
+    );
+    await assert.rejects(newAdminFacet.write.emergencyWithdrawEth(), /ZeroAddress/);
+  });
+
+  it('Should prevent withdraw zero address', async function () {
+    const { diamond, admin } = await loadFixture(deployDiamond);
+    await assert.rejects(diamond.write.emergencyWithdrawErc20([[ZERO_ADDRESS]]), /ZeroAddress/);
+  });
+
+  it('Should prevent set or initialize the treasury or permit2 address to the zero address', async function () {
+    const { diamond, admin } = await loadFixture(deployDiamond);
+
+    await assert.rejects(diamond.write.setTreasury([ZERO_ADDRESS]), /ZeroAddress/);
+
+    const newAdminFacet = await viem.deployContract('AdminFacet');
+
+    await assert.rejects(
+      newAdminFacet.write.initialize([admin.account.address, ZERO_ADDRESS]),
+      /ZeroAddress/,
+    );
+    await assert.rejects(
+      newAdminFacet.write.initialize([ZERO_ADDRESS, PERMIT2_ADDRESS]),
+      /ZeroAddress/,
+    );
+  });
+
+  it('Should skip withdraw if the token or native token balance is zero', async function () {
+    const { diamond, mockToken, treasuryAddress } = await loadFixture(deployDiamond);
+
+    const previousBalanceTokenOfTreasury = await mockToken.read.balanceOf([treasuryAddress]);
+    const previousBalanceEthOfTreasury = await publicClient.getBalance({
+      address: treasuryAddress,
+    });
+
+    await diamond.write.emergencyWithdrawErc20([[mockToken.address]]);
+    await diamond.write.emergencyWithdrawEth();
+    const balanceTokenOfTreasury = await mockToken.read.balanceOf([treasuryAddress]);
+    const balanceEthOfTreasury = await publicClient.getBalance({ address: treasuryAddress });
+
+    assert.equal(balanceTokenOfTreasury, previousBalanceTokenOfTreasury);
+    assert.equal(balanceEthOfTreasury, previousBalanceEthOfTreasury);
+  });
+
+  it('Should prevent if non admin calls the emergency withdraw functions or set the treasury', async function () {
+    const { diamond, mockToken, user1 } = await loadFixture(deployDiamond);
+
+    const randomAddress = getRandomAddress();
+
+    await assert.rejects(
+      diamond.write.emergencyWithdrawErc20([[mockToken.address]], {
+        account: user1.account.address,
+      }),
+      /AccessControl/,
+    );
+    await assert.rejects(
+      diamond.write.emergencyWithdrawEth({ account: user1.account.address }),
+      /AccessControl/,
+    );
+    await assert.rejects(
+      diamond.write.setTreasury([randomAddress], { account: user1.account.address }),
+      /AccessControl/,
+    );
   });
 });

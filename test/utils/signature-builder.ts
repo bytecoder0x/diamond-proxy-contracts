@@ -8,9 +8,10 @@ import {
   WalletClient,
   encodeFunctionData,
 } from 'viem';
-import { getCurrentBlockTimestamp } from './helpers.js';
-import { EXECUTION_DEADLINE } from './constant.js';
+
 import { publicClient } from './client.js';
+import { EXECUTION_DEADLINE } from './constant.js';
+import { getCurrentBlockTimestamp } from './helpers.js';
 
 export interface GasLessSignatureForSwapParams {
   diamond: any; // IDiamondProxy
@@ -98,10 +99,7 @@ export const getSignatureERC20Permit = async (
   return {
     signature: cutSelector(encoded),
     nonce,
-    deadline,
-    r,
-    s,
-    v,
+    deadline
   };
 };
 

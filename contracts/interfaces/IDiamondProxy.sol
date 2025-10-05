@@ -109,4 +109,9 @@ interface IDiamondProxy is IDiamondLoupe, IDiamondCut, IExecutionFacet {
     function emergencyWithdrawErc20(address[] memory tokens) external;
     /// @notice Emergency withdraw ETH
     function emergencyWithdrawEth() external;
+
+    // ERC-173 style ownership (immutable functions on the diamond)
+    /// @notice Returns the immutable diamond owner
+    /// @return ownerAddress Address of the immutable owner
+    function owner() external view returns (address);
 }

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { deployDiamond } from '../utils/deploy-diamond.js';
+
 import { loadFixture } from '../utils/client.js';
+import { deployDiamond } from '../utils/deploy-diamond.js';
 
 describe('DiamondLoupeFacet', async function () {
   it('Should match the facet function selectors with the facet address that belong to', async function () {
@@ -44,5 +45,21 @@ describe('DiamondLoupeFacet', async function () {
     const facetsAddressesFromDiamond = await diamond.read.facetAddresses();
 
     assert.equal(facetsFromDiamond.length, facetsAddressesFromDiamond.length);
+  });
+
+  it('Should support interface IERC165, IDiamondCut, IDiamondLoupe', async function () {
+    const { diamond } = await loadFixture(deployDiamond);
+
+    const IERC165 = '0x01ffc9a7';
+    const IDiamondCut = '0x1f931c1c';
+    const IDiamondLoupe = '0x48e2b093';
+
+    const supportsInterfaceIERC165 = await diamond.read.supportsInterface([IERC165]);
+    const supportsInterfaceIDiamondCut = await diamond.read.supportsInterface([IDiamondCut]);
+    const supportsInterfaceIDiamondLoupe = await diamond.read.supportsInterface([IDiamondLoupe]);
+
+    assert.equal(supportsInterfaceIERC165, true);
+    assert.equal(supportsInterfaceIDiamondCut, true);
+    assert.equal(supportsInterfaceIDiamondLoupe, true);
   });
 });

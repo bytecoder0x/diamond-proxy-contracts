@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
+import { loadFixture, viem } from './utils/client.js';
+import { PERMIT2_ADDRESS, ZERO_ADDRESS } from './utils/constant.js';
 import { deployDiamond } from './utils/deploy-diamond.js';
-import { loadFixture } from './utils/client.js';
 
 describe('DiamondDeployer', async function () {
   it('Should deploy with correct facets and function selectors', async function () {
@@ -51,5 +53,39 @@ describe('DiamondDeployer', async function () {
     for (let i = 0; i < adminFacetsSelectorsFromLib.length; i++) {
       assert.equal(adminFacetsSelectorsFromDiamond[i], adminFacetsSelectorsFromLib[i]);
     }
+  });
+
+  it('Should prevent to deploy the diamond with the zero admin or permit2', async function () {
+    const {
+      diamondDeployerAddress,
+      admin,
+      diamondCutFacetAddress,
+      diamondLoupeFacetAddress,
+      whitelistFacetAddress,
+      executionFacetAddress,
+      adminFacetAddress,
+      diamondInitAddress,
+    } = await loadFixture(deployDiamond);
+
+    const deploymentArgs = {
+      admin: admin.account.address,
+      permit2: PERMIT2_ADDRESS,
+      diamondCutFacet: diamondCutFacetAddress,
+      diamondLoupeFacet: diamondLoupeFacetAddress,
+      whitelistFacet: whitelistFacetAddress,
+      executionFacet: executionFacetAddress,
+      adminFacet: adminFacetAddress,
+      diamondInit: diamondInitAddress,
+    };
+
+    const diamondDeployer = await viem.getContractAt('DiamondDeployer', diamondDeployerAddress);
+    await assert.rejects(
+      diamondDeployer.write.deployDiamond([{ ...deploymentArgs, admin: ZERO_ADDRESS }]),
+      /InvalidDeploymentArgs/,
+    );
+    await assert.rejects(
+      diamondDeployer.write.deployDiamond([{ ...deploymentArgs, permit2: ZERO_ADDRESS }]),
+      /InvalidDeploymentArgs/,
+    );
   });
 });

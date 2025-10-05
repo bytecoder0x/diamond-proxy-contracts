@@ -1,9 +1,11 @@
-import type { HardhatUserConfig } from 'hardhat/config';
-
-import hardhatToolboxViemPlugin from '@nomicfoundation/hardhat-toolbox-viem';
 import hardhatNetworkHelpersPlugin from '@nomicfoundation/hardhat-network-helpers';
+import hardhatToolboxViemPlugin from '@nomicfoundation/hardhat-toolbox-viem';
 import hardhatTypechainPlugin from '@nomicfoundation/hardhat-typechain';
+import dotenv from 'dotenv';
 import { configVariable } from 'hardhat/config';
+
+import type { HardhatUserConfig } from 'hardhat/config';
+dotenv.config({ quiet: true });
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin, hardhatNetworkHelpersPlugin, hardhatTypechainPlugin],
@@ -33,10 +35,11 @@ const config: HardhatUserConfig = {
       type: 'edr-simulated',
       chainType: 'l1',
       forking: {
-        url: configVariable('ETH_RPC_URL'),
+        url: process.env.ETH_RPC_URL || '',
         blockNumber: 23461899,
       },
       chainId: 1,
+      gasPrice: 250000000000, // 250 gwei
     },
     hardhatOp: {
       type: 'edr-simulated',
