@@ -12,9 +12,30 @@ import { IDiamondProxy } from "./interfaces/IDiamondProxy.sol";
 /// @notice Helper contract for deploying and setting up the complete Diamond proxy
 /// @dev Deploys all facets and sets up the Diamond in a single transaction
 contract DiamondDeployer {
-    /// @notice Deploy a complete Diamond proxy with all facets
-    /// @param args Deployment arguments
-    /// @return diamond Address of the deployed Diamond
+    /// @notice Arguments for Diamond deployment
+    struct DeploymentArgs {
+        address admin; // Initial admin address
+        address permit2; // Permit2 contract address
+        address diamondCutFacet;
+        address diamondLoupeFacet;
+        address whitelistFacet;
+        address executionFacet;
+        address adminFacet;
+        address diamondInit;
+    }
+
+    /// @notice Emitted when a Diamond is deployed
+    /// @param diamond Address of the deployed Diamond
+    /// @param admin Address of the admin
+    /// @param permit2 Address of the Permit2 contract
+    event DiamondDeployed(address indexed diamond, address indexed admin, address indexed permit2);
+
+    error InvalidDeploymentArgs();
+
+    /// @notice Deploys a Diamond and wires all facets and initialization
+    /// @param args Deployment arguments including admin, permit2 and facet addresses
+    /// @return diamond Address of the deployed Diamond proxy
+    // solhint-disable-next-line function-max-lines, use-natspec
     function deployDiamond(DeploymentArgs calldata args) external returns (address diamond) {
         // Validate arguments
         if (args.admin == address(0) || args.permit2 == address(0)) {
@@ -70,25 +91,9 @@ contract DiamondDeployer {
         // Note: initializeExecutionRelay() is executed in the Ignition setup module by the admin
 
         // Transfer immutable ownership to admin
-        (bool ok, ) = diamond.call(abi.encodeWithSignature("transferOwnership(address)", args.admin));
-        require(ok, "transferOwnership failed");
+        // Prefer strongly-typed interface over low-level call for ownership transfer
+        Diamond(payable(diamond)).transferOwnership(args.admin);
 
         emit DiamondDeployed(diamond, args.admin, args.permit2);
     }
-
-    /// @notice Arguments for Diamond deployment
-    struct DeploymentArgs {
-        address admin; // Initial admin address
-        address permit2; // Permit2 contract address
-        address diamondCutFacet;
-        address diamondLoupeFacet;
-        address whitelistFacet;
-        address executionFacet;
-        address adminFacet;
-        address diamondInit;
-    }
-
-    event DiamondDeployed(address indexed diamond, address indexed admin, address permit2);
-
-    error InvalidDeploymentArgs();
 }

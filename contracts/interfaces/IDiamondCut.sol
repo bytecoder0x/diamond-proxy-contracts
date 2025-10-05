@@ -23,5 +23,9 @@ interface IDiamondCut {
     /// @param _calldata A function call, including function selector and arguments
     function diamondCut(FacetCut[] calldata _diamondCut, address _init, bytes calldata _calldata) external;
 
+    /// @notice Emitted when a diamond cut is executed
+    /// @param _diamondCut Facet cuts
+    /// @param _init Init target address
+    /// @param _calldata Calldata to execute
     event DiamondCut(FacetCut[] _diamondCut, address _init, bytes _calldata);
 }

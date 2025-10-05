@@ -33,16 +33,29 @@ library LibDiamond {
         address contractOwner;
     }
 
-    bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
+    // keccak256("diamond.standard.diamond.storage")
+    bytes32 internal constant DIAMOND_STORAGE_POSITION =
+        0xc8fcad8db84d3cc18b4c41d551ea0ee66dd599cde068d998e57d5e09332c131c;
 
+    /// @notice Return diamond storage pointer
+    /// @return ds DiamondStorage reference
+    /// @notice Return diamond storage pointer
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
         bytes32 position = DIAMOND_STORAGE_POSITION;
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             ds.slot := position
         }
     }
 
+    /// @notice Emitted when a diamond cut is executed
+    /// @param _diamondCut Facet cuts
+    /// @param _init Init target address
+    /// @param _calldata Calldata to execute
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
+    /// @notice Emitted when ownership changes
+    /// @param previousOwner Previous owner
+    /// @param newOwner New owner
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /// @notice Add/replace/remove any number of functions and optionally execute a function with delegatecall
@@ -66,6 +79,9 @@ library LibDiamond {
         initializeDiamondCut(_init, _calldata);
     }
 
+    /// @notice Add function selectors to a facet
+    /// @param _facetAddress Facet address
+    /// @param _functionSelectors Selectors to add
     function addFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
         if (_functionSelectors.length == 0) {
             revert NoSelectorsProvidedForFacetForCut(_facetAddress);
@@ -90,6 +106,9 @@ library LibDiamond {
         }
     }
 
+    /// @notice Replace existing function selectors with a new facet
+    /// @param _facetAddress Facet address
+    /// @param _functionSelectors Selectors to replace
     function replaceFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
         if (_functionSelectors.length == 0) {
             revert NoSelectorsProvidedForFacetForCut(_facetAddress);
@@ -115,6 +134,9 @@ library LibDiamond {
         }
     }
 
+    /// @notice Remove function selectors
+    /// @param _facetAddress Must be address(0) per EIP-2535 spec
+    /// @param _functionSelectors Selectors to remove
     function removeFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
         if (_functionSelectors.length == 0) {
             revert NoSelectorsProvidedForFacetForCut(_facetAddress);
@@ -131,12 +153,21 @@ library LibDiamond {
         }
     }
 
+    /// @notice Add a new facet to storage
+    /// @param ds Diamond storage
+    /// @param _facetAddress Facet address
     function addFacet(DiamondStorage storage ds, address _facetAddress) internal {
+        // solhint-disable-next-line gas-small-strings
         enforceHasContractCode(_facetAddress, "LibDiamondCut: New facet has no code");
         ds.facetFunctionSelectors[_facetAddress].facetAddressPosition = ds.facetAddresses.length;
         ds.facetAddresses.push(_facetAddress);
     }
 
+    /// @notice Link a selector to a facet
+    /// @param ds Diamond storage
+    /// @param _selector Function selector
+    /// @param _selectorPosition Position in facet selectors array
+    /// @param _facetAddress Facet address
     function addFunction(
         DiamondStorage storage ds,
         bytes4 _selector,
@@ -148,6 +179,10 @@ library LibDiamond {
         ds.selectorToFacetAndPosition[_selector].facetAddress = _facetAddress;
     }
 
+    /// @notice Unlink a selector from a facet
+    /// @param ds Diamond storage
+    /// @param _facetAddress Facet address
+    /// @param _selector Function selector
     function removeFunction(DiamondStorage storage ds, address _facetAddress, bytes4 _selector) internal {
         if (_facetAddress == address(0)) {
             revert CannotRemoveFunctionThatDoesNotExist(_selector);
@@ -184,16 +219,22 @@ library LibDiamond {
         }
     }
 
+    /// @notice Optionally execute initialization after diamond cut
+    /// @param _init Init contract address
+    /// @param _calldata Calldata to execute
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
         if (_init == address(0)) {
             return;
         }
+        // solhint-disable-next-line gas-small-strings
         enforceHasContractCode(_init, "LibDiamondCut: _init address has no code");
+        // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory error) = _init.delegatecall(_calldata);
         if (!success) {
             if (error.length > 0) {
                 // bubble up error
                 /// @solidity memory-safe-assembly
+                // solhint-disable-next-line no-inline-assembly
                 assembly {
                     let returndata_size := mload(error)
                     revert(add(32, error), returndata_size)
@@ -204,8 +245,12 @@ library LibDiamond {
         }
     }
 
+    /// @notice Revert if address has no bytecode
+    /// @param _contract Address to check
+    /// @param _errorMessage Error message
     function enforceHasContractCode(address _contract, string memory _errorMessage) internal view {
         uint256 contractSize;
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             contractSize := extcodesize(_contract)
         }
@@ -216,6 +261,8 @@ library LibDiamond {
 
     // ===== Immutable Ownership helpers =====
 
+    /// @notice Set the immutable contract owner
+    /// @param _newOwner New owner address
     function setContractOwner(address _newOwner) internal {
         if (_newOwner == address(0)) {
             revert ZeroAddress();
@@ -226,10 +273,13 @@ library LibDiamond {
         emit OwnershipTransferred(previous, _newOwner);
     }
 
+    /// @notice Get the immutable contract owner
+    /// @return owner_ Owner address
     function contractOwner() internal view returns (address owner_) {
         owner_ = diamondStorage().contractOwner;
     }
 
+    /// @notice Revert if msg.sender is not the owner
     function enforceIsContractOwner() internal view {
         if (msg.sender != diamondStorage().contractOwner) {
             revert NotContractOwner(msg.sender);

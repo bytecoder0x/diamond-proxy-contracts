@@ -45,5 +45,8 @@ contract DiamondInit {
         address permit2; // Permit2 contract address
     }
 
+    /// @notice Emitted when the Diamond is initialized
+    /// @param admin Address of the initial admin
+    /// @param permit2 Address of the Permit2 contract
     event DiamondInitialized(address indexed admin, address indexed permit2);
 }

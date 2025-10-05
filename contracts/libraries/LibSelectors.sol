@@ -6,11 +6,13 @@ import { WhitelistFacet } from "../facets/WhitelistFacet.sol";
 import { ExecutionFacet } from "../facets/ExecutionFacet.sol";
 import { AdminFacet } from "../facets/AdminFacet.sol";
 
-/// @title SelectorsLib
+/// @title LibSelectors
 /// @notice Provides precomputed function selectors for Diamond facets
 /// @dev Avoids inline keccak256 calls inside DiamondDeployer to reduce bytecode size
 library LibSelectors {
     // ---------------- Loupe Facet ----------------
+    /// @notice Return selectors for DiamondLoupeFacet
+    /// @return selectors Array of function selectors
     function getLoupeFacetSelectors() external pure returns (bytes4[] memory selectors) {
         selectors = new bytes4[](5);
         selectors[0] = DiamondLoupeFacet.facets.selector;
@@ -21,6 +23,8 @@ library LibSelectors {
     }
 
     // ---------------- Whitelist Facet ----------------
+    /// @notice Return selectors for WhitelistFacet
+    /// @return selectors Array of function selectors
     function getWhitelistFacetSelectors() external pure returns (bytes4[] memory selectors) {
         selectors = new bytes4[](5);
         selectors[0] = WhitelistFacet.addWhitelistedSelector.selector;
@@ -31,6 +35,8 @@ library LibSelectors {
     }
 
     // ---------------- Execution Facet ----------------
+    /// @notice Return selectors for ExecutionFacet
+    /// @return selectors Array of function selectors
     function getExecutionFacetSelectors() external pure returns (bytes4[] memory selectors) {
         selectors = new bytes4[](4);
         selectors[0] = ExecutionFacet.relaySignedSwapCall.selector;
@@ -41,8 +47,10 @@ library LibSelectors {
     }
 
     // ---------------- Admin Facet ----------------
+    /// @notice Return selectors for AdminFacet
+    /// @return selectors Array of function selectors
     function getAdminFacetSelectors() external pure returns (bytes4[] memory selectors) {
-        selectors = new bytes4[](18);
+        selectors = new bytes4[](17);
         // OpenZeppelin AccessControl functions (inherited)
         selectors[0] = bytes4(keccak256("grantRole(bytes32,address)"));
         selectors[1] = bytes4(keccak256("revokeRole(bytes32,address)"));
@@ -59,15 +67,14 @@ library LibSelectors {
         selectors[10] = bytes4(keccak256("multicall(bytes[])"));
         // Custom AdminFacet function
         selectors[11] = AdminFacet.initialize.selector;
-        // Permit2 admin controls
-        selectors[12] = AdminFacet.setPermit2.selector;
-        selectors[13] = AdminFacet.getPermit2.selector;
+        // Permit2 admin controls (set removed, keep get)
+        selectors[12] = AdminFacet.getPermit2.selector;
         // Treasury admin controls
-        selectors[14] = AdminFacet.setTreasury.selector;
-        selectors[15] = AdminFacet.getTreasury.selector;
+        selectors[13] = AdminFacet.setTreasury.selector;
+        selectors[14] = AdminFacet.getTreasury.selector;
         // Emergency withdrawals
-        selectors[16] = AdminFacet.emergencyWithdrawErc20.selector;
-        selectors[17] = AdminFacet.emergencyWithdrawEth.selector;
+        selectors[15] = AdminFacet.emergencyWithdrawErc20.selector;
+        selectors[16] = AdminFacet.emergencyWithdrawEth.selector;
     }
 
     // OwnershipFacet removed; ownership managed via AdminFacet

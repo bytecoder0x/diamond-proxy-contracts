@@ -11,8 +11,11 @@ import { BaseFacet } from "./BaseFacet.sol";
 contract WhitelistFacet is BaseFacet {
     using LibAppStorage for LibAppStorage.AppStorage;
 
-    // Events
-    event SelectorWhitelisted(address indexed target, bytes4 indexed selector, bool whitelisted);
+    /// @notice Emitted when a selector is (un)whitelisted for a target
+    /// @param target Target contract address
+    /// @param selector Function selector
+    /// @param whitelisted Whether the selector is whitelisted
+    event SelectorWhitelisted(address indexed target, bytes4 indexed selector, bool indexed whitelisted);
 
     /// @notice Add a selector to the whitelist for a target
     /// @param target Target contract address

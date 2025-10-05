@@ -19,17 +19,11 @@ describe('AdminFacet', async function () {
     assert.equal(unpaused, false);
   });
 
-  it('Should correctly set the permit2 address', async function () {
+  // removed: setPermit2 has been dropped from AdminFacet; keeping read-only check instead
+  it('Should have the initial permit2 address set', async function () {
     const { diamond } = await loadFixture(deployDiamond);
-
-    const oldPermit2 = await diamond.read.getPermit2();
-    assert.equal(oldPermit2, PERMIT2_ADDRESS);
-
-    const newPermit2 = getRandomAddress();
-    await diamond.write.setPermit2([newPermit2]);
-    const permit2 = await diamond.read.getPermit2();
-
-    assert.equal(permit2, newPermit2);
+    const currentPermit2 = await diamond.read.getPermit2();
+    assert.equal(currentPermit2, PERMIT2_ADDRESS);
   });
 
   it('Should correctly set the treasury address', async function () {
