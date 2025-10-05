@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 import { BaseFacet } from "./BaseFacet.sol";
-import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 
 /// @title DiamondCutFacet
 /// @notice Diamond Cut Facet implementation (ERC-2535)

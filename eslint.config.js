@@ -65,6 +65,13 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
+  // Relax unused var checks in Ignition modules (deployment scripts often stage unused vars)
+  {
+    files: ['ignition/modules/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
   // Allow unused in Hardhat config
   {
     files: ['hardhat.config.ts'],

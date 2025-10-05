@@ -2,15 +2,9 @@
 pragma solidity 0.8.30;
 
 import { Diamond } from "./Diamond.sol";
-import { DiamondCutFacet } from "./facets/DiamondCutFacet.sol";
-import { DiamondLoupeFacet } from "./facets/DiamondLoupeFacet.sol";
 // Note: OwnershipFacet removed - using AccessControl instead
 import { LibSelectors } from "./libraries/LibSelectors.sol";
-import { WhitelistFacet } from "./facets/WhitelistFacet.sol";
-import { ExecutionFacet } from "./facets/ExecutionFacet.sol";
-import { AdminFacet } from "./facets/AdminFacet.sol";
 import { DiamondInit } from "./DiamondInit.sol";
-import { LibDiamond } from "./libraries/LibDiamond.sol";
 import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 import { IDiamondProxy } from "./interfaces/IDiamondProxy.sol";
 
