@@ -8,6 +8,8 @@ import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 /// @notice Main Diamond contract implementing ERC-2535 Diamond Standard
 /// @dev This is the main proxy contract that delegates calls to facets
 contract Diamond {
+    error FunctionNotFound(bytes4 _functionSelector);
+
     /// @notice Constructs the Diamond and sets up initial diamond cut capability
     /// @param _contractOwner Address of the initial immutable owner stored in diamond storage
     /// @param _diamondCutFacet Address of the facet that exposes `diamondCut`
@@ -66,8 +68,6 @@ contract Diamond {
 
     /// @notice Receive function to accept ETH transfers
     receive() external payable {}
-
-    error FunctionNotFound(bytes4 _functionSelector);
 
     // ERC-173 style ownership (immutable functions on the diamond)
 

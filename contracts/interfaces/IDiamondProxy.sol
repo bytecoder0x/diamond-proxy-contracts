@@ -109,37 +109,4 @@ interface IDiamondProxy is IDiamondLoupe, IDiamondCut, IExecutionFacet {
     function emergencyWithdrawErc20(address[] memory tokens) external;
     /// @notice Emergency withdraw ETH
     function emergencyWithdrawEth() external;
-
-    // ============ Events ============
-
-    /// @notice Emitted when a call is executed via the Diamond
-    /// @param user Caller/user address
-    /// @param target Target contract
-    /// @param tokenIn Input token
-    /// @param amountIn Input amount
-    /// @param tokenOut Output token
-    /// @param amountOut Output amount
-    /// @param recipient Recipient address
-    event CallExecuted(
-        address indexed user,
-        address indexed target,
-        address indexed tokenIn,
-        uint256 amountIn,
-        address tokenOut,
-        uint256 amountOut,
-        address recipient
-    );
-
-    /// @notice Emitted when a target is (un)whitelisted
-    /// @param target Target contract address
-    /// @param whitelisted Whether target is whitelisted
-    event TargetWhitelisted(address indexed target, bool indexed whitelisted);
-    /// @notice Emitted when a selector is (un)whitelisted for a target
-    /// @param target Target contract address
-    /// @param selector Function selector
-    /// @param whitelisted Whether selector is whitelisted
-    event SelectorWhitelisted(address indexed target, bytes4 indexed selector, bool indexed whitelisted);
-    /// @notice Emitted when Permit2 address changes
-    /// @param newPermit2 New Permit2 address
-    event Permit2Changed(address indexed newPermit2);
 }

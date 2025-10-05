@@ -37,6 +37,31 @@ library LibDiamond {
     bytes32 internal constant DIAMOND_STORAGE_POSITION =
         0xc8fcad8db84d3cc18b4c41d551ea0ee66dd599cde068d998e57d5e09332c131c;
 
+    /// @notice Emitted when a diamond cut is executed
+    /// @param _diamondCut Facet cuts
+    /// @param _init Init target address
+    /// @param _calldata Calldata to execute
+    event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
+    /// @notice Emitted when ownership changes
+    /// @param previousOwner Previous owner
+    /// @param newOwner New owner
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    // Custom errors
+    error IncorrectFacetCutAction(uint8 _action);
+    error NoSelectorsProvidedForFacetForCut(address _facetAddress);
+    error CannotAddSelectorsToZeroAddress(bytes4[] _selectors);
+    error CannotAddFunctionToDiamondThatAlreadyExists(bytes4 _selector);
+    error CannotReplaceSelectorsFromZeroAddress(bytes4[] _selectors);
+    error CannotReplaceFunctionWithTheSameFunctionFromTheSameFacet(bytes4 _selector);
+    error RemoveFacetAddressMustBeZeroAddress(address _facetAddress);
+    error CannotRemoveFunctionThatDoesNotExist(bytes4 _selector);
+    error CannotRemoveImmutableFunction(bytes4 _selector);
+    error InitializationFunctionReverted(address _initializationContractAddress, bytes _calldata);
+    error NoBytecodeAtAddress(address _contract, string _message);
+    error NotContractOwner(address _caller);
+    error ZeroAddress();
+
     /// @notice Return diamond storage pointer
     /// @return ds DiamondStorage reference
     /// @notice Return diamond storage pointer
@@ -48,15 +73,32 @@ library LibDiamond {
         }
     }
 
-    /// @notice Emitted when a diamond cut is executed
-    /// @param _diamondCut Facet cuts
-    /// @param _init Init target address
-    /// @param _calldata Calldata to execute
-    event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
-    /// @notice Emitted when ownership changes
-    /// @param previousOwner Previous owner
-    /// @param newOwner New owner
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    // ===== Immutable Ownership helpers =====
+
+    /// @notice Set the immutable contract owner
+    /// @param _newOwner New owner address
+    function setContractOwner(address _newOwner) internal {
+        if (_newOwner == address(0)) {
+            revert ZeroAddress();
+        }
+        DiamondStorage storage ds = diamondStorage();
+        address previous = ds.contractOwner;
+        ds.contractOwner = _newOwner;
+        emit OwnershipTransferred(previous, _newOwner);
+    }
+
+    /// @notice Get the immutable contract owner
+    /// @return owner_ Owner address
+    function contractOwner() internal view returns (address owner_) {
+        owner_ = diamondStorage().contractOwner;
+    }
+
+    /// @notice Revert if msg.sender is not the owner
+    function enforceIsContractOwner() internal view {
+        if (msg.sender != diamondStorage().contractOwner) {
+            revert NotContractOwner(msg.sender);
+        }
+    }
 
     /// @notice Add/replace/remove any number of functions and optionally execute a function with delegatecall
     /// @param _diamondCut Contains the facet addresses and function selectors
@@ -102,7 +144,9 @@ library LibDiamond {
                 revert CannotAddFunctionToDiamondThatAlreadyExists(selector);
             }
             addFunction(ds, selector, selectorPosition, _facetAddress);
-            ++selectorPosition;
+            unchecked {
+                ++selectorPosition;
+            }
         }
     }
 
@@ -258,46 +302,4 @@ library LibDiamond {
             revert NoBytecodeAtAddress(_contract, _errorMessage);
         }
     }
-
-    // ===== Immutable Ownership helpers =====
-
-    /// @notice Set the immutable contract owner
-    /// @param _newOwner New owner address
-    function setContractOwner(address _newOwner) internal {
-        if (_newOwner == address(0)) {
-            revert ZeroAddress();
-        }
-        DiamondStorage storage ds = diamondStorage();
-        address previous = ds.contractOwner;
-        ds.contractOwner = _newOwner;
-        emit OwnershipTransferred(previous, _newOwner);
-    }
-
-    /// @notice Get the immutable contract owner
-    /// @return owner_ Owner address
-    function contractOwner() internal view returns (address owner_) {
-        owner_ = diamondStorage().contractOwner;
-    }
-
-    /// @notice Revert if msg.sender is not the owner
-    function enforceIsContractOwner() internal view {
-        if (msg.sender != diamondStorage().contractOwner) {
-            revert NotContractOwner(msg.sender);
-        }
-    }
-
-    // Custom errors
-    error IncorrectFacetCutAction(uint8 _action);
-    error NoSelectorsProvidedForFacetForCut(address _facetAddress);
-    error CannotAddSelectorsToZeroAddress(bytes4[] _selectors);
-    error CannotAddFunctionToDiamondThatAlreadyExists(bytes4 _selector);
-    error CannotReplaceSelectorsFromZeroAddress(bytes4[] _selectors);
-    error CannotReplaceFunctionWithTheSameFunctionFromTheSameFacet(bytes4 _selector);
-    error RemoveFacetAddressMustBeZeroAddress(address _facetAddress);
-    error CannotRemoveFunctionThatDoesNotExist(bytes4 _selector);
-    error CannotRemoveImmutableFunction(bytes4 _selector);
-    error InitializationFunctionReverted(address _initializationContractAddress, bytes _calldata);
-    error NoBytecodeAtAddress(address _contract, string _message);
-    error NotContractOwner(address _caller);
-    error ZeroAddress();
 }

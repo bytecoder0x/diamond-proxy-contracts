@@ -10,23 +10,6 @@ import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 abstract contract BaseFacet {
     using LibAppStorage for LibAppStorage.AppStorage;
 
-    /// @notice Check if an account has a role by calling AdminFacet
-    /// @param role Role hash
-    /// @param account Account to check
-    /// @return True if the account has the role
-    function _hasRole(bytes32 role, address account) internal view returns (bool) {
-        // Call AdminFacet's hasRole function through delegatecall
-        (bool success, bytes memory result) = address(this).staticcall(
-            abi.encodeWithSelector(IAccessControl.hasRole.selector, role, account)
-        );
-
-        if (success && result.length > 0) {
-            return abi.decode(result, (bool));
-        }
-
-        return false;
-    }
-
     /// @notice Modifier to check if caller has required role
     /// @param role Role hash required
     modifier onlyRole(bytes32 role) {
@@ -46,5 +29,22 @@ abstract contract BaseFacet {
         bool isPaused = abi.decode(result, (bool));
         if (isPaused) revert LibAppStorage.Paused();
         _;
+    }
+
+    /// @notice Check if an account has a role by calling AdminFacet
+    /// @param role Role hash
+    /// @param account Account to check
+    /// @return True if the account has the role
+    function _hasRole(bytes32 role, address account) internal view returns (bool) {
+        // Call AdminFacet's hasRole function through delegatecall
+        (bool success, bytes memory result) = address(this).staticcall(
+            abi.encodeWithSelector(IAccessControl.hasRole.selector, role, account)
+        );
+
+        if (success && result.length > 0) {
+            return abi.decode(result, (bool));
+        }
+
+        return false;
     }
 }

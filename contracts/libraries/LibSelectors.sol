@@ -76,6 +76,4 @@ library LibSelectors {
         selectors[15] = AdminFacet.emergencyWithdrawErc20.selector;
         selectors[16] = AdminFacet.emergencyWithdrawEth.selector;
     }
-
-    // OwnershipFacet removed; ownership managed via AdminFacet
 }

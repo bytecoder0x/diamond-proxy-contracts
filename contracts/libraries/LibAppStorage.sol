@@ -5,9 +5,6 @@ pragma solidity 0.8.30;
 /// @notice Application-specific storage for the Diamond
 /// @dev Stores all facet-specific state variables in a single struct to avoid storage collisions
 library LibAppStorage {
-    // keccak256("diamond.standard.app.storage")
-    bytes32 internal constant APP_STORAGE_POSITION = 0x2ad3e90873cbe86f6a024e2d91b7abbabc6ce35c355c15912cb7d7df99da235b;
-
     struct AppStorage {
         // Whitelist state (selectors only; targets are AccessControl roles)
         mapping(address => mapping(bytes4 => bool)) whitelistedSelectors;
@@ -18,6 +15,9 @@ library LibAppStorage {
         // Treasury for relayer fee collection
         address treasury;
     }
+
+    // keccak256("diamond.standard.app.storage")
+    bytes32 internal constant APP_STORAGE_POSITION = 0x2ad3e90873cbe86f6a024e2d91b7abbabc6ce35c355c15912cb7d7df99da235b;
 
     /// @notice Return app storage pointer
     /// @return s AppStorage reference

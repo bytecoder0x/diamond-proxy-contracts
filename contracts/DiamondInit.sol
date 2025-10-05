@@ -11,6 +11,17 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 /// @notice Contract used to initialize the Diamond proxy state
 /// @dev This contract is called during the diamond cut to set up initial state
 contract DiamondInit {
+    /// @notice Parameters for Diamond initialization
+    struct InitArgs {
+        address admin; // Initial admin address
+        address permit2; // Permit2 contract address
+    }
+
+    /// @notice Emitted when the Diamond is initialized
+    /// @param admin Address of the initial admin
+    /// @param permit2 Address of the Permit2 contract
+    event DiamondInitialized(address indexed admin, address indexed permit2);
+
     /// @notice Initialize the Diamond with initial configuration
     /// @param args Initialization arguments
     function init(InitArgs calldata args) external {
@@ -38,15 +49,4 @@ contract DiamondInit {
 
         emit DiamondInitialized(args.admin, args.permit2);
     }
-
-    /// @notice Parameters for Diamond initialization
-    struct InitArgs {
-        address admin; // Initial admin address
-        address permit2; // Permit2 contract address
-    }
-
-    /// @notice Emitted when the Diamond is initialized
-    /// @param admin Address of the initial admin
-    /// @param permit2 Address of the Permit2 contract
-    event DiamondInitialized(address indexed admin, address indexed permit2);
 }
