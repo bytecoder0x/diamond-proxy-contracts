@@ -2,23 +2,26 @@ import { publicClient } from './client.js';
 import { OPERATOR_ROLE, PERMIT2_ADDRESS, WHITELIST_MANAGER_ROLE } from './constant.js';
 import { getTargetEvent, recieveUsdc } from './helpers.js';
 import { Address, parseEther, parseUnits } from 'viem';
-import { viem } from './client.js';
+import { viem, defaultFees } from './client.js';
 
 export const deployDiamond = async () => {
   const [admin, operator, user1, user2, treasury] = await viem.getWalletClients();
 
-  const diamondCutFacet = await viem.deployContract('DiamondCutFacet');
-  const diamondLoupeFacet = await viem.deployContract('DiamondLoupeFacet');
-  const whitelistFacet = await viem.deployContract('WhitelistFacet');
-  const executionFacet = await viem.deployContract('ExecutionFacet');
-  const adminFacet = await viem.deployContract('AdminFacet');
-  const diamondInit = await viem.deployContract('DiamondInit');
+  const feeOpts = await defaultFees();
+
+  const diamondCutFacet = await viem.deployContract('DiamondCutFacet', [], { ...feeOpts });
+  const diamondLoupeFacet = await viem.deployContract('DiamondLoupeFacet', [], { ...feeOpts });
+  const whitelistFacet = await viem.deployContract('WhitelistFacet', [], { ...feeOpts });
+  const executionFacet = await viem.deployContract('ExecutionFacet', [], { ...feeOpts });
+  const adminFacet = await viem.deployContract('AdminFacet', [], { ...feeOpts });
+  const diamondInit = await viem.deployContract('DiamondInit', [], { ...feeOpts });
 
   const libSelectors = await viem.deployContract('LibSelectors');
   const diamondDeployer = await viem.deployContract('DiamondDeployer', [], {
     libraries: {
       LibSelectors: libSelectors.address,
     },
+    ...feeOpts,
   });
 
   const deploymentArgs = {
@@ -32,20 +35,24 @@ export const deployDiamond = async () => {
     diamondInit: diamondInit.address,
   };
 
-  const hash = await diamondDeployer.write.deployDiamond([deploymentArgs]);
+  const hash = await diamondDeployer.write.deployDiamond([deploymentArgs], { ...feeOpts });
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
   const event = getTargetEvent(diamondDeployer.abi, receipt, 'DiamondDeployed');
   const diamondAddress = (event?.args as any).diamond as Address;
 
   const diamondContract = await viem.getContractAt('IDiamondProxy', diamondAddress);
-  await diamondContract.write.initializeExecutionRelay();
+  await diamondContract.write.initializeExecutionRelay({ ...feeOpts });
   await diamondContract.write.setTreasury([treasury.account.address]);
   await diamondContract.write.grantRole([WHITELIST_MANAGER_ROLE, admin.account.address]);
   await diamondContract.write.grantRole([OPERATOR_ROLE, operator.account.address]);
 
-  const mockToken = await viem.deployContract('MockToken', [parseEther('100000000')]); // 100M tokens
-  const mockFeeToken = await viem.deployContract('MockFeeToken', [parseEther('100000000')]); // 100M tokens
+  const mockToken = await viem.deployContract('MockToken', [parseEther('100000000')], {
+    ...feeOpts,
+  }); // 100M tokens
+  const mockFeeToken = await viem.deployContract('MockFeeToken', [parseEther('100000000')], {
+    ...feeOpts,
+  }); // 100M tokens
 
   await recieveUsdc(parseUnits('1000', 6), admin.account.address);
 

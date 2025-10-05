@@ -8,6 +8,11 @@ import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 /// @notice Main Diamond contract implementing ERC-2535 Diamond Standard
 /// @dev This is the main proxy contract that delegates calls to facets
 contract Diamond {
+    error FunctionNotFound(bytes4 _functionSelector);
+
+    /// @notice Constructs the Diamond and sets up initial diamond cut capability
+    /// @param _contractOwner Address of the initial immutable owner stored in diamond storage
+    /// @param _diamondCutFacet Address of the facet that exposes `diamondCut`
     constructor(address _contractOwner, address _diamondCutFacet) {
         // Set immutable contract owner in diamond storage
         LibDiamond.setContractOwner(_contractOwner);
@@ -25,10 +30,14 @@ contract Diamond {
 
     // Find facet for function that is called and execute the
     // function if a facet is found and return any value.
+    /// @notice Fallback function delegates unknown calls to the appropriate facet
+    /// @dev Uses inline assembly to perform an efficient delegatecall to the facet
     fallback() external payable {
+        // solhint-disable-line no-complex-fallback
         LibDiamond.DiamondStorage storage ds;
         bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
         // get diamond storage
+        // solhint-disable no-inline-assembly
         assembly {
             ds.slot := position
         }
@@ -54,18 +63,22 @@ contract Diamond {
                 return(0, returndatasize())
             }
         }
+        // solhint-enable no-inline-assembly
     }
 
+    /// @notice Receive function to accept ETH transfers
     receive() external payable {}
-
-    error FunctionNotFound(bytes4 _functionSelector);
 
     // ERC-173 style ownership (immutable functions on the diamond)
 
-    function owner() external view returns (address) {
+    /// @notice Returns the immutable diamond owner
+    /// @return ownerAddress Address of the immutable owner
+    function owner() external view returns (address ownerAddress) {
         return LibDiamond.contractOwner();
     }
 
+    /// @notice Transfers immutable ownership to a new owner
+    /// @param _newOwner Address of the new owner
     function transferOwnership(address _newOwner) external {
         LibDiamond.enforceIsContractOwner();
         LibDiamond.setContractOwner(_newOwner);

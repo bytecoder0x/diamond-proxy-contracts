@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
+/* solhint-disable function-max-lines */
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -41,6 +42,7 @@ library LibPermit {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         IPermit2.PackedAllowance memory allowanceData = IPermit2(s.permit2).allowance(owner, token, address(this));
 
+        // solhint-disable-next-line gas-strict-inequalities
         if (amount <= allowanceData.amount && allowanceData.expiration >= block.timestamp) return;
         _safePermit(IERC20(token), owner, address(this), permit2Data);
     }
@@ -84,8 +86,10 @@ library LibPermit {
         } else {
             LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
             IPermit2.PackedAllowance memory p2 = IPermit2(s.permit2).allowance(owner, token, address(this));
+            // solhint-disable-next-line gas-strict-inequalities
             if (amount <= p2.amount && p2.expiration >= block.timestamp) {
                 usePermit2 = true;
+                // solhint-disable-next-line gas-strict-inequalities
             } else if (IERC20(token).allowance(owner, address(this)) >= amount) {
                 usePermit2 = false;
             } else {
@@ -102,14 +106,16 @@ library LibPermit {
         }
     }
 
-    /// @notice Safe permit execution with error handling
+    /// @notice Internal helper to attempt permit and revert on failure
     /// @param token Token contract
     /// @param owner Token owner
-    /// @param permit Permit signature data
+    /// @param spender Spender
+    /// @param permit Encoded permit bytes
     function _safePermit(IERC20 token, address owner, address spender, bytes calldata permit) private {
         if (!_tryPermit(token, owner, spender, permit)) revert PermitFailed();
     }
 
+    /// @notice Attempt to execute permit across supported standards
     /// @dev Tries to make a permit with the given permit data
     /// @dev That function from one inch (https://www.codeslaw.app/contracts/ethereum/0x111111125421cA6dc452d289314280a0f8842A65)
     /// @param token The address of the token
@@ -130,8 +136,8 @@ library LibPermit {
         bytes4 permitSelector = IERC20Permit.permit.selector;
         bytes4 daiPermitSelector = IDaiLikePermit.permit.selector;
         bytes4 permit2Selector = IPermit2.permit.selector;
+        // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
-            // solhint-disable-line no-inline-assembly
             let ptr := mload(0x40)
 
             // Switch case for different permit lengths, indicating different permit standards

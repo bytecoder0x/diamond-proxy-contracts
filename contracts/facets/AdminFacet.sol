@@ -22,31 +22,41 @@ contract AdminFacet is
     using SafeERC20 for IERC20;
     using Address for address;
 
+    /// @notice Emitted when ERC20 tokens are withdrawn in an emergency
+    /// @param tokens Array of token addresses withdrawn
     event EmergencyWithdrawErc20(address[] tokens);
-    event EmergencyWithdrawEth(uint256 amount);
-    event Initialized(address admin, address permit2);
-    event TreasuryChanged(address treasury);
-    event Permit2AddressChanged(address indexed oldPermit2, address indexed newPermit2);
+    /// @notice Emitted when ETH is withdrawn in an emergency
+    /// @param amount Amount of ETH withdrawn
+    event EmergencyWithdrawEth(uint256 indexed amount);
+    /// @notice Emitted when the facet is initialized
+    /// @param admin Address granted the DEFAULT_ADMIN_ROLE
+    /// @param permit2 Address of the Permit2 contract
+    event Initialized(address indexed admin, address indexed permit2);
+    /// @notice Emitted when the treasury address changes
+    /// @param treasury New treasury address
+    event TreasuryChanged(address indexed treasury);
 
     // Custom Errors
     error EmergencyRescueNotAllowed();
     error TransferFailed();
 
     // Custom Admin Functions
+    /// @notice Pause the protocol (admin only)
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
+    /// @notice Unpause the protocol (admin only)
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 
     /**
-     * @notice Allows the admin to perform an emergency withdrawal of specified ERC20 tokens to the treasury.
+     * @notice Emergency withdraw multiple ERC20 tokens to treasury (admin only)
      * @dev This function allows withdrawal of multiple ERC20 tokens in case of an emergency. Can only be called by an admin.
-     * @param tokens An array of ERC20 token addresses to be withdrawn.
+     * @param tokens Array of ERC20 token addresses
      */
-    function emergencyWithdrawErc20(address[] memory tokens) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function emergencyWithdrawErc20(address[] calldata tokens) external onlyRole(DEFAULT_ADMIN_ROLE) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (s.treasury == address(0)) revert LibAppStorage.ZeroAddress();
         uint256 length = tokens.length;
@@ -80,6 +90,9 @@ contract AdminFacet is
         emit EmergencyWithdrawEth(currentBalance);
     }
 
+    /// @notice Initialize roles and core config
+    /// @param admin Address to be granted DEFAULT_ADMIN_ROLE
+    /// @param permit2 Permit2 contract address
     function initialize(address admin, address permit2) external initializer {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
 
@@ -99,22 +112,17 @@ contract AdminFacet is
         emit Initialized(admin, permit2);
     }
 
-    /// @notice Set the Permit2 contract address (admin only)
-    function setPermit2(address _permit2) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
-        if (_permit2 == address(0)) revert LibAppStorage.ZeroAddress();
-        address old = s.permit2;
-        s.permit2 = _permit2;
-        emit Permit2AddressChanged(old, _permit2);
-    }
-
     /// @notice Get the current Permit2 contract address
-    function getPermit2() external view returns (address) {
+    /// @notice Get current Permit2 contract address
+    /// @return permit2Addr Permit2 address
+    function getPermit2() external view returns (address permit2Addr) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         return s.permit2;
     }
 
     /// @notice Set treasury address for fee collection
+    /// @notice Set treasury address (admin only)
+    /// @param treasury New treasury address
     function setTreasury(address treasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (treasury == address(0)) revert LibAppStorage.ZeroAddress();
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
@@ -123,7 +131,8 @@ contract AdminFacet is
     }
 
     /// @notice Get treasury address
-    function getTreasury() external view returns (address) {
+    /// @return treasuryAddr Treasury address
+    function getTreasury() external view returns (address treasuryAddr) {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         return s.treasury;
     }

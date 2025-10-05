@@ -10,6 +10,27 @@ import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 abstract contract BaseFacet {
     using LibAppStorage for LibAppStorage.AppStorage;
 
+    /// @notice Modifier to check if caller has required role
+    /// @param role Role hash required
+    modifier onlyRole(bytes32 role) {
+        if (!_hasRole(role, msg.sender)) {
+            revert LibAppStorage.NotAuthorized();
+        }
+        _;
+    }
+
+    /// @notice Modifier to ensure contract is not paused
+    /// @dev Fails closed: if `paused()` is missing or call fails, revert as paused
+    modifier whenNotPaused() {
+        (bool success, bytes memory result) = address(this).staticcall(
+            abi.encodeWithSelector(0x5c975abb) // paused() selector
+        );
+        if (!success || result.length == 0) revert LibAppStorage.Paused();
+        bool isPaused = abi.decode(result, (bool));
+        if (isPaused) revert LibAppStorage.Paused();
+        _;
+    }
+
     /// @notice Check if an account has a role by calling AdminFacet
     /// @param role Role hash
     /// @param account Account to check
@@ -25,26 +46,5 @@ abstract contract BaseFacet {
         }
 
         return false;
-    }
-
-    /// @notice Modifier to check if caller has required role
-    /// @param role Role hash required
-    modifier onlyRole(bytes32 role) {
-        if (!_hasRole(role, msg.sender)) {
-            revert LibAppStorage.NotAuthorized();
-        }
-        _;
-    }
-
-    /// @notice Modifier to ensure contract is not paused
-    /// @dev Fails closed: if `paused()` is missing or call fails, revert as paused
-    modifier whenNotPaused() {
-        (bool success, bytes memory result) = address(this).staticcall(
-            abi.encodeWithSelector(bytes4(keccak256("paused()")))
-        );
-        if (!success || result.length == 0) revert LibAppStorage.Paused();
-        bool isPaused = abi.decode(result, (bool));
-        if (isPaused) revert LibAppStorage.Paused();
-        _;
     }
 }
