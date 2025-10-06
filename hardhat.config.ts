@@ -48,8 +48,8 @@ const config: HardhatUserConfig = {
     polygon: {
       type: 'http',
       chainType: 'op',
-      url: configVariable('POLYGON_RPC_URL'),
-      accounts: [configVariable('POLYGON_PRIVATE_KEY')],
+      url: process.env.POLYGON_RPC_URL || '',
+      accounts: [process.env.POLYGON_PRIVATE_KEY || ''],
     },
   },
   typechain: {

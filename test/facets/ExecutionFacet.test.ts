@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseEther, parseUnits } from 'viem';
+import { parseEther, parseUnits, zeroAddress } from 'viem';
 
 import { viem, loadFixture } from '../utils/client.js';
 import { PEPE_ADDRESS, PERMIT2_ADDRESS, USDC_ADDRESS, ZERO_ADDRESS, ZERO_BYTES } from '../utils/constant.js';
@@ -18,7 +18,7 @@ import {
   mockSwapCallParams,
 } from '../utils/execution-test-helpers.js';
 import { getCurrentBlockTimestamp, getRandomAddress, getSelector } from '../utils/helpers.js';
-import { getSignatureERC20Permit } from '../utils/signature-builder.js';
+import { getPermitSingleSignature, getSignatureERC20Permit } from '../utils/signature-builder.js';
 import { invalidMockData, mockTx } from '../utils/trade-data-builder.js';
 
 describe('ExecutionFacet', async function () {
@@ -300,6 +300,150 @@ describe('ExecutionFacet', async function () {
     assert.ok(pepeBalanceRecipientAfter > pepeBalanceRecipientBefore);
     assert.equal(feeTokenBalanceSenderAfter, feeTokenBalanceSenderBefore - feeAmount);
     assert.equal(feeTokenBalanceTreasuryAfter, feeTokenBalanceTreasuryBefore + feeAmount);
+  });
+
+  it('Should correctly execute a signed swap call with permit2', async function () {
+    const { diamond, operator, admin, user1, mockFeeToken, treasuryAddress } =
+      await loadFixture(deployDiamond);
+
+    const permit2Contract = await viem.getContractAt('IPermit2', PERMIT2_ADDRESS);
+
+    const amountToTrade = parseUnits('100', 6);
+    const feeAmount = parseEther('0.001');
+
+    const tx = mockTx;
+    const selector = getSelector(tx.data as `0x${string}`);
+    const target = tx.to as `0x${string}`;
+
+    await diamond.write.addWhitelistedSelector([target, selector]);
+
+    const pepeContract = await viem.getContractAt('MockToken', PEPE_ADDRESS);
+    const usdcContract = await viem.getContractAt('MockToken', USDC_ADDRESS);
+    await usdcContract.write.approve([permit2Contract.address, amountToTrade], { account: admin.account });
+
+    const tokenPermitSignature = await getPermitSingleSignature(
+      usdcContract,
+      admin,
+      diamond.address,
+      permit2Contract,
+      amountToTrade,
+    );
+
+    const testParams: TestSwapParams = {
+      diamond,
+      sender: admin,
+      recipientAddress: user1.account.address,
+      tokenIn: USDC_ADDRESS,
+      tokenOut: PEPE_ADDRESS,
+      feeTokenAddress: mockFeeToken.address,
+      amountIn: amountToTrade,
+      amountOutMin: 0n,
+      feeAmount: feeAmount,
+      tx,
+      target,
+      withTokenPermit2: true,
+      withTokenPermit: false,
+      withFeeTokenPermit: true,
+    };
+
+    const signatures = await createSwapSignatures(testParams);
+    const callParams = buildSwapCallParams(
+      admin.account.address,
+      target,
+      tx.data as `0x${string}`,
+      USDC_ADDRESS,
+      amountToTrade,
+      0n,
+      PEPE_ADDRESS,
+      user1.account.address,
+      signatures.gasLessSignature,
+      mockFeeToken.address,
+      feeAmount,
+      signatures.feeTokenPermitSignature,
+      tokenPermitSignature,
+    );
+
+    const usdcBalanceSenderBefore = await usdcContract.read.balanceOf([admin.account.address]);
+    const pepeBalanceRecipientBefore = await pepeContract.read.balanceOf([user1.account.address]);
+    const feeTokenBalanceSenderBefore = await mockFeeToken.read.balanceOf([admin.account.address]);
+    const feeTokenBalanceTreasuryBefore = await mockFeeToken.read.balanceOf([treasuryAddress]);
+
+    await diamond.write.relaySignedSwapCall(callParams as any, {
+      account: operator.account,
+    });
+
+    const usdcBalanceSenderAfter = await usdcContract.read.balanceOf([admin.account.address]);
+    const pepeBalanceRecipientAfter = await pepeContract.read.balanceOf([user1.account.address]);
+    const feeTokenBalanceSenderAfter = await mockFeeToken.read.balanceOf([admin.account.address]);
+    const feeTokenBalanceTreasuryAfter = await mockFeeToken.read.balanceOf([treasuryAddress]);
+
+    assert.equal(usdcBalanceSenderAfter, usdcBalanceSenderBefore - amountToTrade);
+    assert.ok(pepeBalanceRecipientAfter > pepeBalanceRecipientBefore);
+    assert.equal(feeTokenBalanceSenderAfter, feeTokenBalanceSenderBefore - feeAmount);
+    assert.equal(feeTokenBalanceTreasuryAfter, feeTokenBalanceTreasuryBefore + feeAmount);
+  });
+
+  it('Should prevent execute swap call due incorect token permit single signature', async function () {
+    const { diamond, operator, admin, user1, mockFeeToken, treasuryAddress } =
+      await loadFixture(deployDiamond);
+
+    const permit2Contract = await viem.getContractAt('IPermit2', PERMIT2_ADDRESS);
+
+    const amountToTrade = parseUnits('100', 6);
+    const feeAmount = parseEther('0.001');
+
+    const tx = mockTx;
+    const selector = getSelector(tx.data as `0x${string}`);
+    const target = tx.to as `0x${string}`;
+
+    await diamond.write.addWhitelistedSelector([target, selector]);
+
+    const usdcContract = await viem.getContractAt('MockToken', USDC_ADDRESS);
+    await usdcContract.write.approve([permit2Contract.address, amountToTrade], { account: admin.account });
+
+    const invalidTokenPermitSignature = {
+      signature: "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000005f5e1000000000000000000000000000000000000000000000000000000000069102b750000000000000000000000000000000000000000000000000000000000000000000000000000000000000000420b39569bfdcbc1ac6d003988b27ce3f17b55870000000000000000000000000000000000000000000000000000000069102b750000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000004057176ecceee640db9e8f5d7c55cb9ab7ed095dc0b2d235849b6964b45586aba5f87698b4b456cfd0ca9eaedb6d597fdba9cbb331cfe229930f53cc1c637befd8",
+      nonce: 0n,
+      deadline: 0n,
+    };
+
+    const testParams: TestSwapParams = {
+      diamond,
+      sender: admin,
+      recipientAddress: user1.account.address,
+      tokenIn: USDC_ADDRESS,
+      tokenOut: PEPE_ADDRESS,
+      feeTokenAddress: mockFeeToken.address,
+      amountIn: amountToTrade,
+      amountOutMin: 0n,
+      feeAmount: feeAmount,
+      tx,
+      target,
+      withTokenPermit2: true,
+      withTokenPermit: false,
+      withFeeTokenPermit: true,
+    };
+
+    const signatures = await createSwapSignatures(testParams);
+    const callParams = buildSwapCallParams(
+      admin.account.address,
+      target,
+      tx.data as `0x${string}`,
+      USDC_ADDRESS,
+      amountToTrade,
+      0n,
+      PEPE_ADDRESS,
+      user1.account.address,
+      signatures.gasLessSignature,
+      mockFeeToken.address,
+      feeAmount,
+      signatures.feeTokenPermitSignature,
+      invalidTokenPermitSignature,
+    );
+
+    await assert.rejects(diamond.write.relaySignedSwapCall(callParams as any, {
+      account: operator.account,
+    }), /PermitFailed/);
   });
 
   it('Should correctly charge fee from user if swap failed', async function () {

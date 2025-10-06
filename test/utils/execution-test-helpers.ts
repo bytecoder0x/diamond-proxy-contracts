@@ -35,6 +35,7 @@ export interface TestSwapParams {
   feeAmount: bigint;
   tx: any;
   target: Address;
+  withTokenPermit2?: boolean;
   withTokenPermit: boolean;
   withFeeTokenPermit: boolean;
 }
@@ -178,6 +179,7 @@ export const buildSwapCallParams = (
   feeTokenAddress: Address,
   feeAmount: bigint,
   feeTokenPermitSignature: any,
+  tokenSinglePermitSignature?: any,
 ) => {
   const relayMetaSwap = {
     feeToken: feeTokenAddress,
@@ -188,6 +190,9 @@ export const buildSwapCallParams = (
     deadline: gasLessSignature.deadline,
     signature: gasLessSignature.signature,
   } as any;
+
+  const signature = tokenSinglePermitSignature?.signature;
+  const tokenSinglePermitData = signature ? signature : ZERO_BYTES;
 
   const executeCallParams = [
     senderAddress,
@@ -200,7 +205,7 @@ export const buildSwapCallParams = (
       amountOutMin: amountOutMin,
       recipient: recipient,
       tokenPermitData: ZERO_BYTES,
-      permit2Data: ZERO_BYTES,
+      permit2Data: tokenSinglePermitData,
     },
     relayMetaSwap,
   ] as any;

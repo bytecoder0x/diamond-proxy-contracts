@@ -7,6 +7,8 @@ import {
   parseSignature,
   WalletClient,
   encodeFunctionData,
+  getAddress,
+  signatureToCompactSignature,
 } from 'viem';
 
 import { publicClient } from './client.js';
@@ -100,6 +102,95 @@ export const getSignatureERC20Permit = async (
     signature: cutSelector(encoded),
     nonce,
     deadline
+  };
+};
+
+export const getPermitSingleSignature = async (
+  erc20: any,
+  sender: WalletClient,
+  spender: `0x${string}`,
+  permit2: any,
+  amount: bigint,
+) => {
+  const senderAddress = getAddress(sender.account!.address);
+  const currentTime = await getCurrentBlockTimestamp();
+  const deadline = BigInt(currentTime + EXECUTION_DEADLINE);
+
+  const allowanceData = await permit2.read.allowance([
+    senderAddress,
+    erc20.address,
+    spender,
+  ]);
+  
+  const details = {
+    token: erc20.address,
+    amount,
+    expiration: deadline,
+    nonce: allowanceData.nonce,
+  };
+  
+  const permitSingle = {
+    details,
+    spender,
+    sigDeadline: deadline,
+  };
+
+  const data = {
+    domain: {
+      name: 'Permit2',
+      chainId: Number(publicClient.chain.id),
+      verifyingContract: permit2.address,
+    },
+    types: {
+      PermitSingle: [
+        { name: 'details', type: 'PermitDetails' },
+        { name: 'spender', type: 'address' },
+        { name: 'sigDeadline', type: 'uint256' },
+      ],
+      PermitDetails: [
+        { name: 'token', type: 'address' },
+        { name: 'amount', type: 'uint160' },
+        { name: 'expiration', type: 'uint48' },
+        { name: 'nonce', type: 'uint48' },
+      ],
+    },
+    primaryType: 'PermitSingle',
+    message: {
+      details: {
+        token: permitSingle.details.token,
+        amount: permitSingle.details.amount,
+        expiration: permitSingle.details.expiration,
+        nonce: permitSingle.details.nonce,
+      },
+      spender: permitSingle.spender,
+      sigDeadline: permitSingle.sigDeadline,
+    },
+  };
+
+  const signature = await sender.signTypedData({
+    account: sender.account!,
+    domain: data.domain,
+    types: data.types,
+    primaryType: 'PermitSingle',
+    message: data.message,
+  });
+
+  const parsedSignature = parseSignature(signature);
+  const compactSignature = signatureToCompactSignature(parsedSignature);
+  const permitCall2 = encodeFunctionData({
+    abi: permit2.abi,
+    functionName: 'permit',
+    args: [
+      senderAddress,
+      permitSingle as any,
+      (compactSignature.r + trim0x(compactSignature.yParityAndS)) as `0x${string}`,
+    ],
+  });
+
+  return {
+    signature: cutSelector(permitCall2),
+    nonce: allowanceData.nonce,
+    deadline,
   };
 };
 
@@ -254,3 +345,9 @@ export const getGasLessSignatureForTransfer = async (params: GasLessSignaturePar
 function cutSelector(data: `0x${string}`): `0x${string}` {
   return `0x${data.slice(10)}`;
 }
+
+export const trim0x = (value: bigint | string): string => {
+  const stringifiedValue = value.toString();
+
+  return stringifiedValue.startsWith('0x') ? stringifiedValue.substring(2) : stringifiedValue;
+};
