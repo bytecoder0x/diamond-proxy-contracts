@@ -240,7 +240,7 @@ export const getGasLessSignatureForSwap = async (params: GasLessSignatureForSwap
         { name: 'gasFeeAmount', type: 'uint256' },
         { name: 'nonce', type: 'uint256' },
         { name: 'deadline', type: 'uint256' },
-        { name: 'callData', type: 'bytes32' },
+        { name: 'callData', type: 'bytes' },
       ],
     },
     primaryType: 'Swap',
@@ -256,7 +256,7 @@ export const getGasLessSignatureForSwap = async (params: GasLessSignatureForSwap
       gasFeeAmount: feeAmount,
       nonce,
       deadline,
-      callData: keccak256(data),
+      callData: data,
     },
   });
 

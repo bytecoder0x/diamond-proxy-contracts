@@ -32,11 +32,11 @@ contract ExecutionFacet is
 
     /// @dev EIP-712 typehash for Swap execution with fee
     /// keccak256(
-    /// "Swap(address owner,address target,address tokenIn,address tokenOut,uint256 amountIn,uint256 amountOutMin,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline,bytes32 callData)"
+    /// "Swap(address owner,address target,address tokenIn,address tokenOut,uint256 amountIn,uint256 amountOutMin,address recipient,address gasFeeToken,uint256 gasFeeAmount,uint256 nonce,uint256 deadline,bytes callData)"
     /// )
     /// @notice EIP-712 typehash for Swap execution with fee
     bytes32 public constant SIGNED_SWAP_CALL_TYPEHASH =
-        0x5920ea0bb4824da9c3fbd9a09667b5d360c30ccf190a57e91874c99b00c90784;
+        0xb5c390911a15210de1dd6be4d5e5cd41bf6ec8a87e867f3459d704e5e63da0f3;
 
     /// @dev EIP-712 typehash for Transfer execution with fee
     /// keccak256(
