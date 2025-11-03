@@ -39,15 +39,12 @@ library LibAppStorage {
 
     // Error definitions
     error ZeroAddress();
-    error ZeroAmount();
     error ArrayLengthMismatch();
     error ETHValueNotAllowed();
     error Paused();
     error NotAuthorized();
     error InvalidSelector();
     error SelectorNotWhitelisted();
-    error InsufficientBalance();
     error SlippageExceeded();
     error CallFailed();
-    error EmergencyPause();
 }

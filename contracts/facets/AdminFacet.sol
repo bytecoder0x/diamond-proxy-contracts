@@ -36,10 +36,6 @@ contract AdminFacet is
     /// @param treasury New treasury address
     event TreasuryChanged(address indexed treasury);
 
-    // Custom Errors
-    error EmergencyRescueNotAllowed();
-    error TransferFailed();
-
     // Custom Admin Functions
     /// @notice Pause the protocol (admin only)
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
