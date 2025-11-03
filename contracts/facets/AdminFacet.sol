@@ -36,6 +36,9 @@ contract AdminFacet is
     /// @param treasury New treasury address
     event TreasuryChanged(address indexed treasury);
 
+    // Custom Errors
+    error TreasuryAlreadySet();
+
     // Custom Admin Functions
     /// @notice Pause the protocol (admin only)
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -122,6 +125,7 @@ contract AdminFacet is
     function setTreasury(address treasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (treasury == address(0)) revert LibAppStorage.ZeroAddress();
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
+        if (s.treasury == treasury) revert TreasuryAlreadySet();
         s.treasury = treasury;
         emit TreasuryChanged(treasury);
     }

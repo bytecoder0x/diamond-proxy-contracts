@@ -109,6 +109,11 @@ describe('AdminFacet', async function () {
     );
   });
 
+  it('Should prevent set the treasury to the same address', async function () {
+    const { diamond, treasuryAddress } = await loadFixture(deployDiamond);
+    await assert.rejects(diamond.write.setTreasury([treasuryAddress]), /TreasuryAlreadySet/);
+  });
+
   it('Should skip withdraw if the token or native token balance is zero', async function () {
     const { diamond, mockToken, treasuryAddress } = await loadFixture(deployDiamond);
 
