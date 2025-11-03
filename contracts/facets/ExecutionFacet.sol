@@ -58,6 +58,7 @@ contract ExecutionFacet is
         ExecuteSwapCallParams calldata params,
         RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
+        if (params.tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
         _validateCall(params.target, params.tokenIn, params.callData);
         _verifyAndConsumeSwap(
             owner,
@@ -68,7 +69,6 @@ contract ExecutionFacet is
             relayMeta.deadline,
             relayMeta.signature
         );
-        if (params.tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
         _collectFee(
             owner,
             relayMeta.feeToken,
@@ -87,6 +87,7 @@ contract ExecutionFacet is
         ExecuteTransferParams calldata params,
         RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
+        if (params.token == address(0)) revert LibAppStorage.ZeroAddress();
         _verifyAndConsumeTransfer(
             owner,
             params,
@@ -96,7 +97,6 @@ contract ExecutionFacet is
             relayMeta.deadline,
             relayMeta.signature
         );
-        if (params.token == address(0)) revert LibAppStorage.ZeroAddress();
         _collectFee(
             owner,
             relayMeta.feeToken,

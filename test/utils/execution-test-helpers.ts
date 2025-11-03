@@ -3,6 +3,7 @@ import { Address, WalletClient } from 'viem';
 
 import { viem } from './client.js';
 import { ZERO_ADDRESS, ZERO_BYTES } from './constant.js';
+import { getRandomAddress } from './helpers.js';
 import {
   GasLessSignatureForSwapParams,
   getGasLessSignatureForSwap,
@@ -274,14 +275,14 @@ export const mockTransferCallParams =
   [
     ZERO_ADDRESS,
     {
-      token: ZERO_ADDRESS,
+      token: getRandomAddress(),
       amount: parseEther('1'),
       recipient: ZERO_ADDRESS,
       tokenPermitData: ZERO_BYTES,
       permit2Data: ZERO_BYTES,
     },
     {
-      feeToken: ZERO_ADDRESS,
+      feeToken: getRandomAddress(),
       feeAmount: parseEther('0.001'),
       feeTokenPermitData: ZERO_BYTES,
       feePermit2Data: ZERO_BYTES,
