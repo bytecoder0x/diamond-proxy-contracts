@@ -305,7 +305,6 @@ contract ExecutionFacet is
     function _validateCall(address target, address tokenIn, bytes calldata callData) internal view {
         if (target == address(0)) revert LibAppStorage.ZeroAddress();
         if (tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
-        if (msg.value > 0) revert LibAppStorage.ETHValueNotAllowed();
 
         if (callData.length < 4) revert LibAppStorage.InvalidSelector();
         bytes4 selector = bytes4(callData[:4]);
