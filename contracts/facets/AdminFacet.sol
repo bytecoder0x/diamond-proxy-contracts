@@ -9,6 +9,7 @@ import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgr
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { MulticallUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import { IAdminFacet } from "../interfaces/facets/IAdminFacet.sol";
 
 /// @title AdminFacet
 /// @notice Administrative functions using Diamond-compatible OpenZeppelin patterns
@@ -17,7 +18,8 @@ contract AdminFacet is
     AccessControlEnumerableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    MulticallUpgradeable
+    MulticallUpgradeable,
+    IAdminFacet
 {
     using SafeERC20 for IERC20;
     using Address for address;

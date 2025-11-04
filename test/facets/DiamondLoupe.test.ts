@@ -47,19 +47,37 @@ describe('DiamondLoupeFacet', async function () {
     assert.equal(facetsFromDiamond.length, facetsAddressesFromDiamond.length);
   });
 
-  it('Should support interface IERC165, IDiamondCut, IDiamondLoupe', async function () {
+  it('Should support interface core diamond interfaces and facet interfaces', async function () {
     const { diamond } = await loadFixture(deployDiamond);
 
     const IERC165 = '0x01ffc9a7';
     const IDiamondCut = '0x1f931c1c';
     const IDiamondLoupe = '0x48e2b093';
+    const IExecutionFacet = '0xf01a61ee';
+    const IAdminFacet = '0x7a7dd95c';
+    const IWhitelistFacet = '0x45a95709';
+    const IPausable = '0xe78a39d8';
+    const IMulticall = '0xac9650d8';
+    const IAccessControlEnumerable = '0x5a05180f';
 
     const supportsInterfaceIERC165 = await diamond.read.supportsInterface([IERC165]);
     const supportsInterfaceIDiamondCut = await diamond.read.supportsInterface([IDiamondCut]);
     const supportsInterfaceIDiamondLoupe = await diamond.read.supportsInterface([IDiamondLoupe]);
+    const supportsInterfaceIExecutionFacet = await diamond.read.supportsInterface([IExecutionFacet]);
+    const supportsInterfaceIAdminFacet = await diamond.read.supportsInterface([IAdminFacet]);
+    const supportsInterfaceIWhitelistFacet = await diamond.read.supportsInterface([IWhitelistFacet]);
+    const supportsInterfaceIPausable = await diamond.read.supportsInterface([IPausable]);
+    const supportsInterfaceIMulticall = await diamond.read.supportsInterface([IMulticall]);
+    const supportsInterfaceIAccessControlEnumerable = await diamond.read.supportsInterface([IAccessControlEnumerable]);
 
     assert.equal(supportsInterfaceIERC165, true);
     assert.equal(supportsInterfaceIDiamondCut, true);
     assert.equal(supportsInterfaceIDiamondLoupe, true);
+    assert.equal(supportsInterfaceIExecutionFacet, true);
+    assert.equal(supportsInterfaceIAdminFacet, true);
+    assert.equal(supportsInterfaceIWhitelistFacet, true);
+    assert.equal(supportsInterfaceIPausable, true);
+    assert.equal(supportsInterfaceIMulticall, true);
+    assert.equal(supportsInterfaceIAccessControlEnumerable, true);
   });
 });

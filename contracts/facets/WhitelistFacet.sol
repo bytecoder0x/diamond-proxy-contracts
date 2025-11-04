@@ -3,12 +3,13 @@ pragma solidity 0.8.30;
 
 import { LibAppStorage } from "../libraries/LibAppStorage.sol";
 import { BaseFacet } from "./BaseFacet.sol";
+import { IWhitelistFacet } from "../interfaces/facets/IWhitelistFacet.sol";
 
 /// @title WhitelistFacet
 /// @notice Manages whitelisted targets and selectors for the Diamond
 /// @dev Provides granular control over which contracts and functions can be called
 /// @dev Pause functionality is now handled by AdminFacet using OpenZeppelin Pausable
-contract WhitelistFacet is BaseFacet {
+contract WhitelistFacet is BaseFacet, IWhitelistFacet {
     using LibAppStorage for LibAppStorage.AppStorage;
 
     /// @notice Emitted when a selector is (un)whitelisted for a target
