@@ -27,8 +27,15 @@ library LibPermit {
     /// @param owner Token owner
     /// @param spender Spender to approve (e.g., the Diamond)
     /// @param permit Permit signature data
-    function makeTokenPermit(address token, address owner, address spender, bytes calldata permit) internal {
-        if (IERC20(token).allowance(owner, spender) == type(uint256).max) return;
+    function makeTokenPermit(
+        address token,
+        address owner,
+        address spender,
+        uint256 amount,
+        bytes calldata permit
+    ) internal {
+        uint256 currentAllowance = IERC20(token).allowance(owner, spender);
+        if (currentAllowance >= amount) return;
 
         _safePermit(IERC20(token), owner, spender, permit);
     }
@@ -81,7 +88,7 @@ library LibPermit {
             makePermit2(token, owner, amount, permit2Data);
             usePermit2 = true;
         } else if (tokenPermitData.length > 0) {
-            makeTokenPermit(token, owner, address(this), tokenPermitData);
+            makeTokenPermit(token, owner, address(this), amount, tokenPermitData);
             usePermit2 = false;
         } else {
             LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
