@@ -47,4 +47,5 @@ library LibAppStorage {
     error SlippageExceeded();
     error CallFailed();
     error FeeOnTransferTokenNotSupported();
+    error InsufficientAllowance();
 }
