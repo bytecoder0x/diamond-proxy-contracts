@@ -113,6 +113,19 @@ library LibPermit {
         }
     }
 
+    /// @notice Check if allowance is enough to transfer the amount
+    /// @param token Token address which allowance is checked
+    /// @param owner Token owner
+    /// @param spender Spender address
+    /// @param amount Amount to transfer
+    /// @return true if allowance is enough, false otherwise
+    function hasEnoughAllowance(address token, address owner, address spender, uint256 amount) internal view returns (bool) {
+        if (IERC20(token).allowance(owner, spender) >= amount) return true;
+        LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
+        IPermit2.PackedAllowance memory p2 = IPermit2(s.permit2).allowance(owner, token, spender);
+        return p2.expiration >= block.timestamp && amount <= p2.amount;
+    }
+
     /// @notice Internal helper to attempt permit and revert on failure
     /// @param token Token contract
     /// @param owner Token owner

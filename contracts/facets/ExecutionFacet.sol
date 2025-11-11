@@ -59,6 +59,15 @@ contract ExecutionFacet is
         RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
         if (params.tokenIn == address(0)) revert LibAppStorage.ZeroAddress();
+
+        // If tokenIn equals feeToken rely solely on the fee allowance check so that,
+        // when tokenIn and feeToken the same and permit is needed
+        // it is executed exactly once for the shared fee token.
+        if (params.tokenIn != relayMeta.feeToken) {
+            _requireAllowance(owner, params.tokenIn, params.amountIn, params.tokenPermitData, params.permit2Data);
+        }
+        _requireAllowance(owner, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.feeTokenPermitData, relayMeta.feePermit2Data);
+
         _validateCall(params.target, params.tokenIn, params.callData);
         _verifyAndConsumeSwap(
             owner,
@@ -88,6 +97,15 @@ contract ExecutionFacet is
         RelayMeta calldata relayMeta
     ) external nonReentrant whenNotPaused onlyRole(LibAppStorage.OPERATOR_ROLE) {
         if (params.token == address(0)) revert LibAppStorage.ZeroAddress();
+
+        // If tokenIn equals feeToken rely solely on the fee allowance check so that,
+        // when tokenIn and feeToken the same and permit is needed
+        // it is executed exactly once for the shared fee token.
+        if (params.token != relayMeta.feeToken) {
+            _requireAllowance(owner, params.token, params.amount, params.tokenPermitData, params.permit2Data);
+        }
+        _requireAllowance(owner, relayMeta.feeToken, relayMeta.feeAmount, relayMeta.feeTokenPermitData, relayMeta.feePermit2Data);
+
         _verifyAndConsumeTransfer(
             owner,
             params,
@@ -230,6 +248,28 @@ contract ExecutionFacet is
         if (treasury == address(0)) revert LibAppStorage.ZeroAddress();
         LibPermit.transferFromWithPermit(feeToken, owner, treasury, feeAmount, feeTokenPermitData, feePermit2Data);
         emit FeeCollected(owner, feeToken, feeAmount, treasury);
+    }
+
+    /// @notice Check if allowance is sufficient for token and revert if not
+    /// @param owner Owner address
+    /// @param token Token address
+    /// @param amount Amount to check
+    /// @param tokenPermitData Optional token permit data
+    /// @param permit2Data Optional permit2 data
+    function _requireAllowance(
+        address owner,
+        address token,
+        uint256 amount,
+        bytes calldata tokenPermitData,
+        bytes calldata permit2Data
+    ) private view {
+        if (amount == 0 || token == address(0) || tokenPermitData.length > 0 || permit2Data.length > 0) {
+            return;
+        }
+        
+        if (!LibPermit.hasEnoughAllowance(token, owner, address(this), amount)) {
+            revert LibAppStorage.InsufficientAllowance();
+        }
     }
 
     /// @notice Execute swap on behalf of owner
