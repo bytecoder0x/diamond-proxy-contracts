@@ -20,13 +20,11 @@ contract DiamondInit {
     /// @notice Parameters for Diamond initialization
     struct InitArgs {
         address admin; // Initial admin address
-        address permit2; // Permit2 contract address
     }
 
     /// @notice Emitted when the Diamond is initialized
     /// @param admin Address of the initial admin
-    /// @param permit2 Address of the Permit2 contract
-    event DiamondInitialized(address indexed admin, address indexed permit2);
+    event DiamondInitialized(address indexed admin);
 
     /// @notice Initialize the Diamond with initial configuration
     /// @param args Initialization arguments
@@ -47,21 +45,16 @@ contract DiamondInit {
         ds.supportedInterfaces[type(IMulticall).interfaceId] = true;
         ds.supportedInterfaces[type(IAccessControlEnumerable).interfaceId] = true;
 
-        // Initialize app storage
-        LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
-
         // Validate input parameters
-        if (args.admin == address(0) || args.permit2 == address(0)) {
+        if (args.admin == address(0)) {
             revert LibAppStorage.ZeroAddress();
         }
 
         // Note: Role initialization is now handled by AdminFacet.initialize()
         // using OpenZeppelin's AccessControl instead of custom storage
 
-        // Initialize configuration
-        s.permit2 = args.permit2;
         // Note: Pause state is now handled by OpenZeppelin Pausable in AdminFacet (defaults to unpaused)
 
-        emit DiamondInitialized(args.admin, args.permit2);
+        emit DiamondInitialized(args.admin);
     }
 }
