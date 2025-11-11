@@ -61,6 +61,8 @@ contract AdminFacet is
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (s.treasury == address(0)) revert LibAppStorage.ZeroAddress();
         uint256 length = tokens.length;
+        address[] memory withdrawnTokens = new address[](length);
+        uint256 withdrawnCount;
         for (uint256 i = 0; i < length; ++i) {
             address token = tokens[i];
             if (token == address(0)) revert LibAppStorage.ZeroAddress();
@@ -73,8 +75,23 @@ contract AdminFacet is
                 continue;
             }
             IERC20(token).safeTransfer(s.treasury, withdrawable);
+            withdrawnTokens[withdrawnCount] = token;
+            unchecked {
+                ++withdrawnCount;
+            }
         }
-        emit EmergencyWithdrawErc20(tokens);
+
+        address[] memory emittedTokens;
+        if (withdrawnCount == length) {
+            emittedTokens = withdrawnTokens;
+        } else {
+            emittedTokens = new address[](withdrawnCount);
+            for (uint256 i = 0; i < withdrawnCount; ++i) {
+                emittedTokens[i] = withdrawnTokens[i];
+            }
+        }
+        
+        emit EmergencyWithdrawErc20(emittedTokens);
     }
 
     /**
