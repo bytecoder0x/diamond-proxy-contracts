@@ -46,6 +46,7 @@ describe('AdminFacet', async function () {
     const balanceOfDiamond = await mockToken.read.balanceOf([diamond.address]);
     assert.equal(balanceOfDiamond, lostAmount);
 
+    await diamond.write.pause();
     await diamond.write.emergencyWithdrawErc20([[mockToken.address]]);
     const balanceOfTreasury = await mockToken.read.balanceOf([newTreasury]);
     const newBalanceOfDiamond = await mockToken.read.balanceOf([diamond.address]);
@@ -68,6 +69,7 @@ describe('AdminFacet', async function () {
     const balanceOfDiamond = await publicClient.getBalance({ address: diamond.address });
     assert.equal(balanceOfDiamond, lostAmount);
 
+    await diamond.write.pause();
     await diamond.write.emergencyWithdrawEth();
     const balanceOfTreasury = await publicClient.getBalance({ address: newTreasury });
     const newBalanceOfDiamond = await publicClient.getBalance({ address: diamond.address });
@@ -80,6 +82,7 @@ describe('AdminFacet', async function () {
     const newAdminFacet = await viem.deployContract('AdminFacet');
 
     await newAdminFacet.write.initialize([admin.account.address, PERMIT2_ADDRESS]);
+    await newAdminFacet.write.pause();
     await assert.rejects(
       newAdminFacet.write.emergencyWithdrawErc20([[mockToken.address]]),
       /ZeroAddress/,
@@ -89,6 +92,7 @@ describe('AdminFacet', async function () {
 
   it('Should prevent withdraw zero address', async function () {
     const { diamond, admin } = await loadFixture(deployDiamond);
+    await diamond.write.pause();
     await assert.rejects(diamond.write.emergencyWithdrawErc20([[ZERO_ADDRESS]]), /ZeroAddress/);
   });
 
@@ -122,6 +126,7 @@ describe('AdminFacet', async function () {
       address: treasuryAddress,
     });
 
+    await diamond.write.pause();
     await diamond.write.emergencyWithdrawErc20([[mockToken.address]]);
     await diamond.write.emergencyWithdrawEth();
     const balanceTokenOfTreasury = await mockToken.read.balanceOf([treasuryAddress]);
@@ -150,5 +155,11 @@ describe('AdminFacet', async function () {
       diamond.write.setTreasury([randomAddress], { account: user1.account.address }),
       /AccessControl/,
     );
+  });
+
+  it('Should revert emergency withdraws when not paused', async function () {
+    const { diamond, mockToken } = await loadFixture(deployDiamond);
+    await assert.rejects(diamond.write.emergencyWithdrawErc20([[mockToken.address]]), /ExpectedPause/);
+    await assert.rejects(diamond.write.emergencyWithdrawEth(), /ExpectedPause/);
   });
 });

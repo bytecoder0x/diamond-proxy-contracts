@@ -57,7 +57,11 @@ contract AdminFacet is
      * @dev This function allows withdrawal of multiple ERC20 tokens in case of an emergency. Can only be called by an admin.
      * @param tokens Array of ERC20 token addresses
      */
-    function emergencyWithdrawErc20(address[] calldata tokens) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function emergencyWithdrawErc20(address[] calldata tokens)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        whenPaused
+    {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (s.treasury == address(0)) revert LibAppStorage.ZeroAddress();
         uint256 length = tokens.length;
@@ -98,7 +102,7 @@ contract AdminFacet is
      * @notice Allows the admin to perform an emergency withdrawal of ETH to the treasury.
      * @dev This function allows withdrawal of ETH from the contract in case of an emergency. Can only be called by an admin.
      */
-    function emergencyWithdrawEth() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function emergencyWithdrawEth() external onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
         LibAppStorage.AppStorage storage s = LibAppStorage.appStorage();
         if (s.treasury == address(0)) revert LibAppStorage.ZeroAddress();
         uint256 currentBalance = address(this).balance;
