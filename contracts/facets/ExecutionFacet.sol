@@ -238,6 +238,7 @@ contract ExecutionFacet is
     function _executeSwapForOwner(address owner, ExecuteSwapCallParams calldata params) internal {
         uint256 balanceBefore = _getBalance(params.tokenOut, params.recipient);
         if (params.amountIn > 0) {
+            uint256 tokenInBalanceBefore = _getBalance(params.tokenIn, address(this));
             LibPermit.transferFromWithPermit(
                 params.tokenIn,
                 owner,
@@ -246,6 +247,11 @@ contract ExecutionFacet is
                 params.tokenPermitData,
                 params.permit2Data
             );
+            uint256 tokenInBalanceAfter = _getBalance(params.tokenIn, address(this));
+            uint256 receivedAmount = tokenInBalanceAfter - tokenInBalanceBefore;
+            if (receivedAmount != params.amountIn) {
+                revert LibAppStorage.FeeOnTransferTokenNotSupported();
+            }
             _approveToken(params.tokenIn, params.target, params.amountIn);
         }
         // solhint-disable-next-line avoid-low-level-calls

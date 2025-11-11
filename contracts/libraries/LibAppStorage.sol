@@ -46,4 +46,5 @@ library LibAppStorage {
     error SelectorNotWhitelisted();
     error SlippageExceeded();
     error CallFailed();
+    error FeeOnTransferTokenNotSupported();
 }

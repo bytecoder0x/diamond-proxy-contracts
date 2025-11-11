@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseEther, parseUnits, zeroAddress } from 'viem';
+import { encodeFunctionData, parseEther, parseUnits, zeroAddress } from 'viem';
 
 import { viem, loadFixture } from '../utils/client.js';
 import { PEPE_ADDRESS, PERMIT2_ADDRESS, USDC_ADDRESS, ZERO_ADDRESS, ZERO_BYTES } from '../utils/constant.js';
@@ -517,6 +517,67 @@ describe('ExecutionFacet', async function () {
     assert.equal(pepeBalanceRecipientAfter, pepeBalanceRecipientBefore);
     assert.equal(feeTokenBalanceSenderAfter, feeTokenBalanceSenderBefore - feeAmount);
     assert.equal(feeTokenBalanceTreasuryAfter, feeTokenBalanceTreasuryBefore + feeAmount);
+  });
+
+  it('Should revert swap when input token charges transfer fees', async function () {
+    const { diamond, operator, admin, user1, mockFeeToken } = await loadFixture(deployDiamond);
+
+    const feeOnTransferToken = await viem.deployContract('MockFeeOnTransferToken', [
+      parseEther('1000000'),
+      admin.account.address,
+    ]);
+
+    const amountToTrade = parseEther('10');
+    const feeAmount = parseEther('0.001');
+    const callData = encodeFunctionData({
+      abi: feeOnTransferToken.abi,
+      functionName: 'transfer',
+      args: [user1.account.address, amountToTrade],
+    });
+    const target = feeOnTransferToken.address as `0x${string}`;
+    const selector = getSelector(callData);
+
+    await diamond.write.addWhitelistedSelector([target, selector]);
+    await feeOnTransferToken.write.approve([diamond.address, amountToTrade], {
+      account: admin.account,
+    });
+
+    const testParams: TestSwapParams = {
+      diamond,
+      sender: admin,
+      recipientAddress: user1.account.address,
+      tokenIn: feeOnTransferToken.address,
+      tokenOut: feeOnTransferToken.address,
+      feeTokenAddress: mockFeeToken.address,
+      amountIn: amountToTrade,
+      amountOutMin: 0n,
+      feeAmount: feeAmount,
+      tx: { to: target, data: callData },
+      target,
+      withTokenPermit: false,
+      withFeeTokenPermit: true,
+    };
+
+    const signatures = await createSwapSignatures(testParams);
+    const callParams = buildSwapCallParams(
+      admin.account.address,
+      target,
+      callData,
+      feeOnTransferToken.address,
+      amountToTrade,
+      0n,
+      feeOnTransferToken.address,
+      user1.account.address,
+      signatures.gasLessSignature,
+      mockFeeToken.address,
+      feeAmount,
+      signatures.feeTokenPermitSignature,
+    );
+
+    await assert.rejects(
+      diamond.write.relaySignedSwapCall(callParams as any, { account: operator.account }),
+      /FeeOnTransferTokenNotSupported/,
+    );
   });
 
   it('Should prevent execution of a call with non-whitelisted target or selector', async function () {
