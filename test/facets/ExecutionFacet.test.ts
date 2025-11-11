@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { encodeFunctionData, maxUint256, parseEther, parseUnits, zeroAddress } from 'viem';
+import { encodeFunctionData, parseEther, parseUnits, zeroAddress } from 'viem';
 
 import { viem, loadFixture } from '../utils/client.js';
 import { PEPE_ADDRESS, PERMIT2_ADDRESS, USDC_ADDRESS, ZERO_ADDRESS, ZERO_BYTES } from '../utils/constant.js';
@@ -585,10 +585,6 @@ describe('ExecutionFacet', async function () {
     const amountToTrade = parseUnits('100', 6);
     const feeAmount = parseEther('0.001');
 
-    const usdcContract = await viem.getContractAt('MockToken', USDC_ADDRESS);
-    await usdcContract.write.approve([diamond.address, amountToTrade], { account: admin.account });
-    await mockFeeToken.write.approve([diamond.address, feeAmount], { account: admin.account });
-
     const tx = mockTx;
     const target = tx.to as `0x${string}`;
 
@@ -681,48 +677,6 @@ describe('ExecutionFacet', async function () {
     );
   });
 
-  it('Should revert transfer without fee permits when allowance is insufficient and permit data is not provided', async function () {
-    const { diamond, operator, admin, user1, mockToken, mockFeeToken } = await loadFixture(deployDiamond);
-
-    const feeAmount = parseEther('0.001');
-    const nonceBefore = await diamond.read.nonces([admin.account.address]);
-
-    const transferParams: TestTransferParams = {
-      diamond,
-      sender: admin,
-      recipientAddress: user1.account.address,
-      tokenAddress: mockToken.address,
-      amount: 0n,
-      feeTokenAddress: mockFeeToken.address,
-      feeAmount,
-      withTokenPermit: false,
-      withFeeTokenPermit: false,
-    };
-
-    const signatures = await createTransferSignatures(transferParams);
-    const callParams = buildTransferCallParams(
-      admin.account.address,
-      mockToken.address,
-      0n,
-      user1.account.address,
-      signatures.tokenPermitSignature,
-      signatures.feeTokenPermitSignature,
-      signatures.gasLessSignature,
-      mockFeeToken.address,
-      feeAmount,
-    );
-
-    await assert.rejects(
-      diamond.write.relaySignedTransferCall(callParams as any, {
-        account: operator.account,
-      }),
-      /InsufficientAllowance/,
-    );
-
-    const nonceAfter = await diamond.read.nonces([admin.account.address]);
-    assert.equal(nonceAfter, nonceBefore);
-  });
-
   it('Should prevent call if token is zero address', async function () {
     const { diamond, operator, admin, user1, mockToken, mockFeeToken, treasuryAddress } =
       await loadFixture(deployDiamond);
@@ -766,8 +720,6 @@ describe('ExecutionFacet', async function () {
 
     const amount = parseEther('1');
     const feeAmount = parseEther('0.001');
-
-    await mockToken.write.approve([diamond.address, amount], { account: admin.account });
 
     const params: TestTransferParams = {
       diamond,
@@ -815,21 +767,15 @@ describe('ExecutionFacet', async function () {
   });
 
   it('Should prevent call swap with invalid selector', async function () {
-    const { diamond, operator, admin, mockToken } =
+    const { diamond, operator, admin } =
       await loadFixture(deployDiamond);
 
-    const amountIn = parseEther('1');
-
     const copyOfMockSwapCallParams = [...mockSwapCallParams] as any;
-    copyOfMockSwapCallParams[0] = admin.account.address;
     copyOfMockSwapCallParams[1].target = getRandomAddress();
-    copyOfMockSwapCallParams[1].tokenIn = mockToken.address;
-    copyOfMockSwapCallParams[1].amountIn = amountIn;
-
-    await mockToken.write.approve([diamond.address, amountIn], { account: admin.account });
+    copyOfMockSwapCallParams[1].tokenIn = getRandomAddress();
 
     // calldata is zero bytes what means invalid selector
-    await assert.rejects(diamond.write.relaySignedSwapCall(copyOfMockSwapCallParams as any, {
+    await assert.rejects(diamond.write.relaySignedSwapCall(copyOfMockSwapCallParams, {
       account: operator.account,
     }), /InvalidSelector/);
   });
@@ -838,29 +784,19 @@ describe('ExecutionFacet', async function () {
     const { diamond, operator } =
       await loadFixture(deployDiamond);
 
-    const permitData = "0x1234567890123456789012345678901234567890123456789012345678901234";
-
-      const copyOfMockTransferCallParams = [...mockTransferCallParams] as any;
-      copyOfMockTransferCallParams[1].tokenPermitData = permitData; // for validate allowance
-      copyOfMockTransferCallParams[2].feeTokenPermitData = permitData; // for validate allowance
-
       // in mockTransferCallParams, owner already set to ZERO_ADDRESS
-      await assert.rejects(diamond.write.relaySignedTransferCall(copyOfMockTransferCallParams as any, {
+      await assert.rejects(diamond.write.relaySignedTransferCall(mockTransferCallParams, {
         account: operator.account,
-      }), /ZeroAddress/); // because owner is zero address
+      }), /ZeroAddress/);
   });
 
   it('Should prevent call if deadline is in the past', async function () {
-    const { diamond, operator, admin, mockToken } =
+    const { diamond, operator, admin } =
       await loadFixture(deployDiamond);
-
-      const permitData = "0x1234567890123456789012345678901234567890123456789012345678901234";
 
       const copyOfMockTransferCallParams = [...mockTransferCallParams] as any;
       copyOfMockTransferCallParams[0] = admin.account.address;
-      copyOfMockTransferCallParams[1].tokenPermitData = permitData; // for validate allowance
-      copyOfMockTransferCallParams[2].feeTokenPermitData = permitData; // for validate allowance
-    
+
       // in mockTransferCallParams, deadline already set to 0
       await assert.rejects(diamond.write.relaySignedTransferCall(copyOfMockTransferCallParams, {
         account: operator.account,
@@ -871,12 +807,8 @@ describe('ExecutionFacet', async function () {
     const { diamond, operator, admin } =
       await loadFixture(deployDiamond);
 
-    const permitData = "0x1234567890123456789012345678901234567890123456789012345678901234";
-
       const copyOfMockTransferCallParams = [...mockTransferCallParams] as any;
       copyOfMockTransferCallParams[0] = admin.account.address;
-      copyOfMockTransferCallParams[1].tokenPermitData = permitData; // for validate allowance
-      copyOfMockTransferCallParams[2].feeTokenPermitData = permitData; // for validate allowance
       copyOfMockTransferCallParams[2].deadline = BigInt(await getCurrentBlockTimestamp() + 1000);
       copyOfMockTransferCallParams[2].nonce = 1; // wrong nonce (should be 0)
 
