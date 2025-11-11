@@ -17,21 +17,6 @@ describe('DiamondInit', async function () {
     assert.equal(owner.toLowerCase(), admin.account.address.toLowerCase());
   });
 
-  it('Should prevent to init the diamond with the zero admin or permit2', async function () {
-    const { admin } = await loadFixture(deployDiamond);
-
-    const newDiamondInit = await viem.deployContract('DiamondInit');
-
-    await assert.rejects(
-      newDiamondInit.write.init([{ admin: ZERO_ADDRESS, permit2: PERMIT2_ADDRESS }]),
-      /ZeroAddress/,
-    );
-    await assert.rejects(
-      newDiamondInit.write.init([{ admin: admin.account.address, permit2: ZERO_ADDRESS }]),
-      /ZeroAddress/,
-    );
-  });
-
   it('Should prevent to init the diamond after deployment', async function () {
     const { diamond, admin } = await loadFixture(deployDiamond);
     await assert.rejects(diamond.write.initialize([admin.account.address, PERMIT2_ADDRESS]));

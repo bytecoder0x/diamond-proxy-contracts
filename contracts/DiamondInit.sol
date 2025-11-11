@@ -17,18 +17,11 @@ import { IAccessControlEnumerable } from "@openzeppelin/contracts/access/extensi
 /// @notice Contract used to initialize the Diamond proxy state
 /// @dev This contract is called during the diamond cut to set up initial state
 contract DiamondInit {
-    /// @notice Parameters for Diamond initialization
-    struct InitArgs {
-        address admin; // Initial admin address
-    }
-
     /// @notice Emitted when the Diamond is initialized
-    /// @param admin Address of the initial admin
-    event DiamondInitialized(address indexed admin);
+    event DiamondInitialized();
 
     /// @notice Initialize the Diamond with initial configuration
-    /// @param args Initialization arguments
-    function init(InitArgs calldata args) external {
+    function init() external {
         // Add the supported interfaces
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
 
@@ -45,16 +38,11 @@ contract DiamondInit {
         ds.supportedInterfaces[type(IMulticall).interfaceId] = true;
         ds.supportedInterfaces[type(IAccessControlEnumerable).interfaceId] = true;
 
-        // Validate input parameters
-        if (args.admin == address(0)) {
-            revert LibAppStorage.ZeroAddress();
-        }
-
         // Note: Role initialization is now handled by AdminFacet.initialize()
         // using OpenZeppelin's AccessControl instead of custom storage
 
         // Note: Pause state is now handled by OpenZeppelin Pausable in AdminFacet (defaults to unpaused)
 
-        emit DiamondInitialized(args.admin);
+        emit DiamondInitialized();
     }
 }

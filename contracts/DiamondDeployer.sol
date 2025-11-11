@@ -78,9 +78,7 @@ contract DiamondDeployer {
         });
 
         // Prepare initialization call
-        DiamondInit.InitArgs memory initArgs = DiamondInit.InitArgs({ admin: args.admin, permit2: args.permit2 });
-
-        bytes memory initCalldata = abi.encodeWithSelector(DiamondInit.init.selector, initArgs);
+        bytes memory initCalldata = abi.encodeWithSelector(DiamondInit.init.selector);
 
         // Execute diamond cut with initialization (owner = deployer at this point)
         IDiamondCut(diamond).diamondCut(cuts, args.diamondInit, initCalldata);
